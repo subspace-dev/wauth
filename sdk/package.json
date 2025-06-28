@@ -1,0 +1,40 @@
+{
+  "name": "wauth",
+  "version": "0.0.1",
+  "description": "Web2 auth sdk for Arweave",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm run clean && npm run build:esm && npm run build:cjs && npm run postbuild",
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "build:watch": "tsc -p tsconfig.esm.json --watch",
+    "clean": "rm -rf dist",
+    "postbuild": "node scripts/postbuild.js",
+    "prepublishOnly": "npm run build",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "publish-npm": "npm run build && npm publish --access public"
+  },
+  "keywords": [
+    "arweave",
+    "ao",
+    "auth",
+    "decentralized",
+    "web2"
+  ],
+  "author": "Ankush Singh <ankush@arweave.org>",
+  "license": "MIT",
+  "peerDependencies": {
+    "pocketbase": "^0.26.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.4",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "arweave": "^1.15.7"
+  }
+}

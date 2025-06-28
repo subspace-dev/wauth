@@ -1,0 +1,17 @@
+{
+  "name": "wauth",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "backend": "cd backend && bun run start"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "concurrently": "^9.2.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {}
+}

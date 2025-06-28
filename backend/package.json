@@ -1,0 +1,23 @@
+{
+  "name": "backend",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start:pocketbase": "bin/pocketbase serve --dir ./pb_data",
+    "start:backend": "bun run index.ts",
+    "start": "concurrently \"bun run start:pocketbase\" \"bun run start:backend\""
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "arweave": "^1.15.7",
+    "cross-fetch": "^4.1.0",
+    "eventsource": "^4.0.0",
+    "pocketbase": "^0.26.1"
+  }
+}
