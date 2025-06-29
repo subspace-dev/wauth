@@ -10,16 +10,20 @@ export enum WAuthProviders {
 
 export class WAuth {
     static devUrl = "http://localhost:8090"
+    static devBackendUrl = "http://localhost:8091"
     static prodUrl = "https://wauth.arnode.asia"
+    static prodBackendUrl = "https://wauth-backend.arnode.asia"
 
     private pb: PocketBase;
     private authData: RecordAuthResponse<RecordModel> | null;
     private wallet: RecordModel | null;
     private authRecord: RecordModel | null;
+    private backendUrl: string;
 
 
-    constructor({ dev, url }: { dev?: boolean, url?: string }) {
+    constructor({ dev, url, backendUrl }: { dev?: boolean, url?: string, backendUrl?: string }) {
         this.pb = new PocketBase(url || (dev ? WAuth.devUrl : WAuth.prodUrl));
+        this.backendUrl = backendUrl || (dev ? WAuth.devBackendUrl : WAuth.prodBackendUrl);
         this.authData = null;
         this.wallet = null;
         this.authRecord = null;
