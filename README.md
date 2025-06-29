@@ -2,6 +2,8 @@
 
 Seamless Social auth for Arweave Ecosystem
 
+Try demo at [wauth_ankush.ar.io](https://wauth_ankush.ar.io)
+
 ## Social Auth through Arweave Wallet Kit
 
 Usage Docs : [@wauth/strategy](./strategy/README.md)
