@@ -26,7 +26,7 @@ export default function Main() {
 
     theme={{
       displayTheme: "dark",
-      accent: { r: 23, g: 23, b: 23 },
+      accent: { r: 110, g: 169, b: 100 },
     }}>
     <App />
   </ArweaveWalletKit>
