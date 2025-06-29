@@ -8,9 +8,9 @@ function App() {
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [email, setEmail] = useState<string | null>(null)
 
-
   const address = useActiveAddress()
   const { connected, disconnect } = useConnection()
+
   const strategy = getStrategy(WAuthProviders.Github)
   strategy.onAuthDataChange((data) => {
     console.log("[app] auth data changed", data)

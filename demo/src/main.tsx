@@ -4,10 +4,11 @@ import App from './App.tsx'
 import { ArweaveWalletKit } from '@arweave-wallet-kit/react'
 import { getStrategy } from '../lib/strategy.ts'
 import { WAuthProviders } from '@wauth/strategy'
+import type { Strategy } from '@arweave-wallet-kit/core/strategy'
 
 
 export default function Main() {
-  const strategies = [
+  const strategies: any = [
     getStrategy(WAuthProviders.Github),
     getStrategy(WAuthProviders.Google),
     getStrategy(WAuthProviders.Discord)
