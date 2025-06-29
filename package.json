@@ -6,7 +6,8 @@
   "scripts": {
     "backend": "cd backend && bun run start",
     "start": "cd backend && bun run start",
-    "dev": "concurrently \"cd backend && bun run dev\" \"cd sdk && npm run dev\" \"cd strategy && npm run dev\"",
+    "demo": "cd demo && bun run dev",
+    "dev": "concurrently \"cd backend && bun run dev\" \"cd sdk && npm run dev\" \"cd strategy && npm run dev\" \"cd demo && bun run dev\"",
     "publish:sdk": "cd sdk && npm run publish-npm",
     "publish:strategy": "cd strategy && npm run publish-npm"
   },

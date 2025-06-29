@@ -11,29 +11,63 @@ import type { SignatureOptions } from "arweave/web/lib/crypto/crypto-interface";
 import { WAuth, WAuthProviders } from "@wauth/sdk";
 
 export default class WAuthStrategy implements Strategy {
-    public id: "wauth" = "wauth";
+    public id: string = "wauth";
     public name = "WAuth";
     public description = "WAuth";
-    public theme = "29, 43, 194";
-    public logo = "";
+    public theme = "25,25,25";
+    public logo = "94R-dRRMdFerUnt8HuQzWT48ktgKsgjQ0uH6zlMFXVw";
     public url = "https://subspace.ar.io"
     private walletRef: WAuth;
     private provider: WAuthProviders;
     private addressListeners: ((address: string) => void)[] = [];
 
+    private authData: any;
+    private authDataListeners: ((data: any) => void)[] = [];
 
-    constructor({ provider }: { provider?: WAuthProviders }) {
-        this.provider = provider || WAuthProviders.Google
-        this.name = `${this.provider} (powered by WAuth)`
+    private logos: { [key in WAuthProviders]: string } = {
+        [WAuthProviders.Google]: "mc-lqDefUJZdDSOOqepLICrfEoQCACnS51tB3kKqvlk",
+        [WAuthProviders.Github]: "2bcLcWjuuRFDqFHlUvgvX2MzA2hOlZL1ED-T8OFBwCY",
+        [WAuthProviders.Discord]: "i4Lw4kXr5t57p8E1oOVGMO4vR35TlYsaJ9XYbMMVd8I"
+    }
+
+
+    constructor({ provider }: { provider: WAuthProviders }) {
+        this.provider = provider
+        this.id = this.id + "-" + this.provider
+        this.name = `${this.provider.charAt(0).toUpperCase() + this.provider.slice(1).toLowerCase()}`
         this.walletRef = new WAuth({}) // auto reconnects based on localStorage
+        this.authData = this.walletRef.getAuthData();
+        this.logo = this.logos[provider]
     }
 
     public async connect(): Promise<void> {
-        this.walletRef.connect({ provider: this.provider })
+        const data = await this.walletRef.connect({ provider: this.provider })
+        if (data) {
+            this.authData = data?.meta
+            this.authDataListeners.forEach(listener => listener(data?.meta));
+        }
+    }
+
+    public async reconnect(): Promise<any> {
+        const data = await this.walletRef.connect({ provider: this.provider })
+        if (data) {
+            this.authData = data?.meta
+            this.authDataListeners.forEach(listener => listener(this.authData));
+        }
+        return this.authData
+    }
+
+    public onAuthDataChange(callback: (data: any) => void): void {
+        this.authDataListeners.push(callback);
+    }
+
+    public getAuthData(): any {
+        return this.authData;
     }
 
     public async disconnect(): Promise<void> {
         this.walletRef.logout()
+        this.authData = null;
     }
 
     public async getActiveAddress(): Promise<string> {
@@ -94,6 +128,18 @@ export default class WAuthStrategy implements Strategy {
     public removeAddressEvent(listener: (e: CustomEvent<{ address: string }>) => void): void {
         this.addressListeners.splice(this.addressListeners.indexOf(listener as any), 1);
     }
-
-
 }
+
+function shouldDisconnect(address: string | undefined, connected: boolean) {
+    if (connected && !address && !localStorage.getItem("pocketbase_auth")) {
+        return true
+    }
+    return false
+}
+
+function fixConnection(address: string | undefined, connected: boolean, disconnect: () => void) {
+    if (shouldDisconnect(address, connected)) { disconnect() }
+}
+
+export { WAuthProviders, fixConnection }
+

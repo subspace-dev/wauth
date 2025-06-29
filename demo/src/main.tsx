@@ -1,0 +1,34 @@
+import { createRoot } from 'react-dom/client'
+import './index.css'
+import App from './App.tsx'
+import { ArweaveWalletKit } from '@arweave-wallet-kit/react'
+import { getStrategy } from '../lib/strategy.ts'
+import { WAuthProviders } from '@wauth/strategy'
+
+
+export default function Main() {
+  const strategies = [
+    getStrategy(WAuthProviders.Github),
+    getStrategy(WAuthProviders.Google),
+    getStrategy(WAuthProviders.Discord)
+  ]
+
+  return <ArweaveWalletKit
+    config={{
+      appInfo: {
+        name: "WAuth Demo",
+        logo: "4R-dRRMdFerUnt8HuQzWT48ktgKsgjQ0uH6zlMFXVw",
+      },
+      strategies,
+      permissions: ["ACCESS_ADDRESS", "SIGN_TRANSACTION"]
+    }}
+
+    theme={{
+      displayTheme: "dark",
+      accent: { r: 23, g: 23, b: 23 },
+    }}>
+    <App />
+  </ArweaveWalletKit>
+}
+
+createRoot(document.getElementById('root')!).render(<Main />)

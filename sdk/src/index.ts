@@ -20,6 +20,8 @@ export class WAuth {
     private authRecord: RecordModel | null;
     private backendUrl: string;
 
+    private authDataListeners: ((data: any) => void)[] = [];
+
 
     constructor({ dev, url, backendUrl }: { dev?: boolean, url?: string, backendUrl?: string }) {
         this.pb = new PocketBase(url || (dev ? WAuth.devUrl : WAuth.prodUrl));
@@ -28,24 +30,31 @@ export class WAuth {
         this.wallet = null;
         this.authRecord = null;
 
-        this.pb.authStore.onChange((token, record) => {
-            console.log("[wauth] auth store changed", record?.email)
+        this.pb.authStore.onChange(async (token, record) => {
+            if (!record || !localStorage.getItem("pocketbase_auth")) {
+                return
+            }
+            console.log("[wauth] auth updated", record?.email)
             this.authRecord = record;
+            this.authData = this.getAuthData();
+            this.wallet = await this.getWallet();
+            this.authDataListeners.forEach(listener => listener(this.getAuthData()));
         }, true)
     }
 
-    // private async generateWallet(): Promise<{ jwk: any, address: string }> {
-    //     const ar = Arweave.init({})
-    //     const jwk = await ar.wallets.generate()
-    //     const address = await ar.wallets.jwkToAddress(jwk)
-    //     return { jwk, address }
-    // }
+    onAuthDataChange(callback: (data: any) => void): void {
+        this.authDataListeners.push(callback);
+        if (this.authData) {
+            callback(this.authData);
+        }
+    }
 
     async connect({ provider }: { provider: WAuthProviders }) {
         if (!Object.values(WAuthProviders).includes(provider)) throw new Error(`Invalid provider: ${provider}. Valid providers are: ${Object.values(WAuthProviders).join(", ")}`)
 
         try {
             this.authData = await this.pb.collection("users").authWithOAuth2({ provider })
+            this.authDataListeners.forEach(listener => listener(this.getAuthData()));
         } catch (e) {
             console.error("[wauth] error logging in,", e)
             return null;
@@ -57,7 +66,6 @@ export class WAuth {
             this.wallet = await this.getWallet()
             if (!this.wallet) {
                 console.log("[wauth] no wallet found, creating one")
-
                 await this.pb.collection("wallets").create({})
                 this.wallet = await this.getWallet()
                 if (!this.wallet) throw new Error("Failed to create wallet")
@@ -74,9 +82,10 @@ export class WAuth {
         return this.pb.authStore.isValid;
     }
 
-    async getActiveAddress() {
+    async getActiveAddress(): Promise<string> {
         if (!this.isLoggedIn()) throw new Error("Not logged in")
-        return this.wallet?.address
+        if (!this.wallet) this.wallet = await this.getWallet()
+        return this.wallet?.address || ""
     }
 
     async getPermissions(): Promise<PermissionType[]> {
@@ -98,16 +107,16 @@ export class WAuth {
     }
 
     getAuthData() {
-        if (!this.isLoggedIn()) throw new Error("Not logged in")
+        if (!this.isLoggedIn()) return null;
         return this.authData
     }
 
     async getWallet() {
-        if (!this.isLoggedIn()) throw new Error("Not logged in")
+        if (!this.isLoggedIn()) return null;
 
         try {
             this.wallet = await this.pb.collection("wallets").getFirstListItem(`user.id = "${this.pb.authStore.record?.id}"`)
-
+            console.log("[wauth] wallet", this.wallet?.address)
             if (!this.wallet) {
                 console.log("[wauth] no wallet found, creating one")
 
@@ -120,13 +129,14 @@ export class WAuth {
 
             return this.wallet;
         } catch (e) {
-            console.info("[wauth] error fetching wallet, may not exist", e)
+            if (`${e}`.includes("autocancelled")) return null
+            console.info("[wauth] error fetching wallet", e)
             return null;
         }
     }
 
     getAuthRecord() {
-        if (!this.isLoggedIn()) throw new Error("Not logged in")
+        if (!this.isLoggedIn()) return null;
         return this.authRecord
     }
 
