@@ -67,5 +67,5 @@ Check [subspace](https://github.com/subspace-dev/app) source code for reference 
 
 On successful implementation, users will see a seamless social authentication flow that creates an Arweave-compatible wallet.
 
-![WAuth SDK Demo](../assets/sdk.gif)
+![WAuth SDK Demo](https://raw.githubusercontent.com/ankushKun/wauth/refs/heads/main/assets/sdk.gif)
 
