@@ -15,6 +15,10 @@ app.get('/jwk', async (c) => {
     return c.json({ jwk, address })
 })
 
+app.post('/sign', async (c) => {
+
+})
+
 
 console.log("Backend started")
 

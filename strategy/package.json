@@ -1,0 +1,46 @@
+{
+  "name": "@wauth/strategy",
+  "version": "0.0.1",
+  "description": "WAuth strategy for Arweave Wallet Kit",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "npm run clean && tsc",
+    "clean": "rm -rf dist",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "keywords": [
+    "arweave",
+    "ao",
+    "auth",
+    "decentralized",
+    "web2"
+  ],
+  "author": "Ankush Singh <ankush@arweave.org>",
+  "license": "MIT",
+  "dependencies": {
+    "@arweave-wallet-kit/core": "^0.1.1",
+    "@wauth/sdk": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.7",
+    "arconnect": "^1.0.4",
+    "arweave": "^1.15.7",
+    "typescript": "^5.8.3"
+  }
+}
