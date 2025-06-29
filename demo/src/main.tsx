@@ -8,7 +8,7 @@ import type { Strategy } from '@arweave-wallet-kit/core/strategy'
 
 
 export default function Main() {
-  const strategies: any = [
+  const strategies = [
     getStrategy(WAuthProviders.Github),
     getStrategy(WAuthProviders.Google),
     getStrategy(WAuthProviders.Discord)
@@ -20,7 +20,7 @@ export default function Main() {
         name: "WAuth Demo",
         logo: "4R-dRRMdFerUnt8HuQzWT48ktgKsgjQ0uH6zlMFXVw",
       },
-      strategies,
+      strategies: strategies as Strategy[],
       permissions: ["ACCESS_ADDRESS", "SIGN_TRANSACTION"]
     }}
 

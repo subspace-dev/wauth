@@ -1,9 +1,15 @@
-# WAuth <img src="./assets/wauth.png" height="20px"/>
+# WAuth <img src="./assets/wauth.png" height="24px"/>
 
 Seamless Social auth for Arweave Ecosystem
 
-Check [demo](./demo/) directory for a Vite + React example implementation of [@wauth/strategy](https://www.npmjs.com/package/@wauth/strategy) with [Arweave Wallet Kit](https://www.npmjs.com/package/@arweave-wallet-kit/react)
+## Social Auth through Arweave Wallet Kit
 
-<img src="./assets/connect-modal.png" style="border-radius: 28px" />
+Usage Docs : [@wauth/strategy](./strategy/README.md)
 
-WAuth can be implemented through
+![arweave-wallet-kit-demo](./assets/awk.gif)
+
+## Social Auth through @wauth/sdk
+
+Usage Docs : [@wauth/sdk](./sdk/README.md)
+
+![wauth-sdk-demo](./assets/sdk.gif)

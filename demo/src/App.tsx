@@ -28,7 +28,7 @@ function App() {
     }
   }, [connected])
 
-  return <div>
+  return <div className="container">
     <ConnectButton />
     <div>
       <p>Address: {address || "NA"}</p>
