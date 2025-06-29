@@ -86,4 +86,4 @@ export default function App(){
 
 On successful implementation one would see the following options in the wallet connect modal
 
-![awk](../assets/awk.gif)
+![awk](https://raw.githubusercontent.com/ankushKun/wauth/refs/heads/main/assets/awk.gif)
