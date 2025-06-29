@@ -1,6 +1,6 @@
 {
   "name": "@wauth/strategy",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "WAuth strategy for Arweave Wallet Kit",
   "type": "module",
   "publishConfig": {
@@ -36,7 +36,7 @@
   "license": "MIT",
   "dependencies": {
     "@arweave-wallet-kit/core": "^0.1.1",
-    "@wauth/sdk": "../sdk"
+    "@wauth/sdk": "^0.0.3"
   },
   "devDependencies": {
     "@types/node": "^24.0.7",
