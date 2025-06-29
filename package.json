@@ -4,14 +4,17 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "backend": "cd backend && bun run start"
+    "backend": "cd backend && bun run start",
+    "start": "cd backend && bun run start",
+    "dev": "concurrently \"cd backend && bun run dev\" \"cd sdk && npm run dev\" \"cd strategy && npm run dev\""
   },
   "devDependencies": {
-    "@types/bun": "latest",
-    "concurrently": "^9.2.0"
+    "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
-  "dependencies": {}
+  "dependencies": {
+    "concurrently": "^9.2.0"
+  }
 }
