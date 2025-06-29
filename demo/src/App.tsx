@@ -11,8 +11,20 @@ function App() {
   const address = useActiveAddress()
   const { connected, disconnect } = useConnection()
 
-  const strategy = getStrategy(WAuthProviders.Github)
-  strategy.onAuthDataChange((data) => {
+  const githubStrategy = getStrategy(WAuthProviders.Github)
+  githubStrategy.onAuthDataChange((data) => {
+    console.log("[app] auth data changed", data)
+    setAccessToken(data.accessToken)
+    setEmail(data.email)
+  })
+  const googleStrategy = getStrategy(WAuthProviders.Google)
+  googleStrategy.onAuthDataChange((data) => {
+    console.log("[app] auth data changed", data)
+    setAccessToken(data.accessToken)
+    setEmail(data.email)
+  })
+  const discordStrategy = getStrategy(WAuthProviders.Discord)
+  discordStrategy.onAuthDataChange((data) => {
     console.log("[app] auth data changed", data)
     setAccessToken(data.accessToken)
     setEmail(data.email)
@@ -34,7 +46,7 @@ function App() {
       <p>Address: {address || "NA"}</p>
       <p>Connected: {connected.toString()}</p>
       <br />
-      <h3>Github Auth Data</h3>
+      <h3>Auth Data</h3>
       <p>Email: {email || "NA"}</p>
       <p>AccessToken: {accessToken || "NA"}</p>
     </div>
