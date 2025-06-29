@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start:pocketbase": "bin/pocketbase serve --dir ./pb_data",
+    "start:pocketbase": "bin/pocketbase serve --dir ./pb_data --dev",
     "start:backend": "bun run index.ts",
     "start": "concurrently \"bun run start:pocketbase\" \"bun run start:backend\""
   },
@@ -18,6 +18,7 @@
     "arweave": "^1.15.7",
     "cross-fetch": "^4.1.0",
     "eventsource": "^4.0.0",
+    "hono": "^4.8.3",
     "pocketbase": "^0.26.1"
   }
 }

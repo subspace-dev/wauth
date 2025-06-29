@@ -8,24 +8,48 @@ onBootstrap((e) => {
 
 onRecordAuthWithOAuth2Request((e) => {
     if (e.isNewRecord) {
-        console.log("new user signed in with", e.providerName)
+        console.log("new user signed in with: ", e.providerName)
     }
     else {
-        console.log(`${e.auth.get("email")} requested login with ${e.providerName}`)
+        if (e.auth && e.auth.get) {
+            console.log("OAuth request:", e.auth.get("email"), e.providerName)
+        } else {
+            console.log("OAuth request (no auth data yet):", e.providerName)
+        }
     }
     e.next()
 })
 
 onRecordCreateRequest((e) => {
+    const utils = require(`${__hooks}/utils.js`)
     const authId = e.auth.get("id")
     console.log("wallet create request from", e.auth.email(), authId)
     e.record.set("user", authId)
+
+    // if user already has a wallet, skip
+    // else get new jwk and address and set in record
+
+    // console.log("finding wallet for user", authId)
+    // const wallet = $app.findRecordsByFilter("wallets", `user = "${authId}"`)
+    // console.log(wallet.length)
+    // console.log("OK")
+    try {
+        const res = $http.send({
+            url: "http://localhost:8091/jwk",
+            method: "GET",
+        })
+        const body = res.body
+        const bodyJson = utils.bodyToJson(body)
+        e.record.set("jwk", bodyJson.jwk)
+        e.record.set("address", bodyJson.address)
+    } catch (e) {
+        console.log(e)
+    }
     e.next()
 }, "wallets")
 
 onRecordAfterCreateSuccess((e) => {
     console.log("wallet create success:", e.record.id)
-    e.record.hide("jwk")
     e.next()
 }, "wallets")
 
