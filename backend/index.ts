@@ -9,7 +9,11 @@ dotenv.config()
 const ar = Arweave.init({})
 
 const app = new Hono()
-app.use(cors())
+app.use(cors({
+    origin: '*',
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization']
+}))
 
 // delay 2 seconds to let pocketbase start
 await new Promise(resolve => setTimeout(resolve, 2000))
