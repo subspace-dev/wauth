@@ -145,6 +145,24 @@ app.post('/connect-wallet', async (c) => {
 
 })
 
+app.get("/check-bot/:guildId", async (c) => {
+
+    // get the guild id from the url
+    const guildId = c.req.param("guildId")
+
+    // get the bot token from the env
+    const botToken = process.env.BOT_TOKEN
+
+    // return true if the bot is in the guild
+    const res = await fetch(`https://discord.com/api/v10/guilds/${guildId}`, {
+        headers: {
+            Authorization: `Bot ${botToken}`
+        }
+    })
+
+    return c.json({ exists: res.status === 200 }, 200)
+})
+
 console.log("Backend started")
 
 export default {
