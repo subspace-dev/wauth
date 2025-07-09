@@ -23,8 +23,9 @@ export declare class WAuth {
         backendUrl?: string;
     });
     onAuthDataChange(callback: (data: any) => void): void;
-    connect({ provider }: {
+    connect({ provider, scopes }: {
         provider: WAuthProviders;
+        scopes?: string[];
     }): Promise<RecordAuthResponse<RecordModel> | null>;
     addConnectedWallet(address: string, pkey: string, signature: string): Promise<any>;
     isLoggedIn(): boolean;

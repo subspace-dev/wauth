@@ -54,11 +54,11 @@ export class WAuth {
         }
     }
 
-    async connect({ provider }: { provider: WAuthProviders }) {
+    async connect({ provider, scopes }: { provider: WAuthProviders, scopes?: string[] }) {
         if (!Object.values(WAuthProviders).includes(provider)) throw new Error(`Invalid provider: ${provider}. Valid providers are: ${Object.values(WAuthProviders).join(", ")}`)
 
         try {
-            this.authData = await this.pb.collection("users").authWithOAuth2({ provider })
+            this.authData = await this.pb.collection("users").authWithOAuth2({ provider, scopes })
             this.authDataListeners.forEach(listener => listener(this.getAuthData()));
         } catch (e) {
             console.error("[wauth] error logging in,", e)
