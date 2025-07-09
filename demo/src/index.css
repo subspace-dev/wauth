@@ -295,7 +295,212 @@ body {
 }
 
 .arweave-wallet-kit button:hover {
-    transform: translateY(-2px) !important;
-    background: rgba(0, 0, 0, 0.7) !important;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4) !important;
+    background: rgba(139, 69, 19, 0.8);
+    transform: translateY(-1px);
+    box-shadow:
+        0 6px 12px rgba(139, 69, 19, 0.3),
+        0 0 0 1px rgba(255, 193, 7, 0.4) inset;
+}
+
+/* Connected Wallets Styles */
+.wallet-actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.add-wallet-btn,
+.refresh-btn {
+    flex: 1;
+    min-width: 140px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(10px);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.add-wallet-btn {
+    background: rgba(16, 185, 129, 0.6);
+    color: #ffffff;
+    border-color: rgba(16, 185, 129, 0.8);
+}
+
+.add-wallet-btn:hover:not(:disabled) {
+    background: rgba(16, 185, 129, 0.8);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+.add-wallet-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: rgba(16, 185, 129, 0.4);
+}
+
+.refresh-btn {
+    background: rgba(59, 130, 246, 0.6);
+    color: #ffffff;
+    border-color: rgba(59, 130, 246, 0.8);
+}
+
+.refresh-btn:hover:not(:disabled) {
+    background: rgba(59, 130, 246, 0.8);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.refresh-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: rgba(59, 130, 246, 0.4);
+}
+
+.connected-wallets-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.wallet-item {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    padding: 16px;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(5px);
+}
+
+.wallet-item:hover {
+    background: rgba(0, 0, 0, 0.6);
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+}
+
+.wallet-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.wallet-item-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.remove-wallet-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(10px);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    background: rgba(239, 68, 68, 0.6);
+    color: #ffffff;
+}
+
+.remove-wallet-btn:hover {
+    background: rgba(239, 68, 68, 0.8);
+    border-color: rgba(239, 68, 68, 0.8);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(239, 68, 68, 0.3);
+}
+
+.wallet-address,
+.wallet-created {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+}
+
+.wallet-address .label,
+.wallet-created .label {
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.85rem;
+}
+
+.wallet-address .value,
+.wallet-created .value {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: rgba(255, 255, 255, 0.8);
+    font-style: italic;
+}
+
+.no-wallets {
+    text-align: center;
+    padding: 24px;
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    border: 1px dashed rgba(255, 255, 255, 0.3);
+}
+
+.no-wallets p {
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+.no-wallets p:first-child {
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+@media (max-width: 768px) {
+    .wallet-actions {
+        flex-direction: column;
+    }
+
+    .add-wallet-btn,
+    .refresh-btn {
+        min-width: unset;
+    }
+
+    .wallet-address,
+    .wallet-created {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .wallet-address .value,
+    .wallet-created .value {
+        width: 100%;
+        text-align: center;
+    }
+
+    .wallet-item-actions {
+        justify-content: center;
+    }
+
+    .remove-wallet-btn {
+        width: 100%;
+        padding: 10px;
+        font-size: 0.9rem;
+    }
 }

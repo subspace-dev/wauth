@@ -2,6 +2,7 @@ import PocketBase, { type RecordAuthResponse, type RecordModel } from "pocketbas
 import Arweave from "arweave"
 import type { GatewayConfig, PermissionType } from "arconnect";
 
+
 export enum WAuthProviders {
     Google = "google",
     Github = "github",
@@ -19,6 +20,7 @@ export class WAuth {
     private wallet: RecordModel | null;
     private authRecord: RecordModel | null;
     private backendUrl: string;
+    public version: string = `0.0.5`;
 
     private authDataListeners: ((data: any) => void)[] = [];
 
@@ -81,6 +83,28 @@ export class WAuth {
         return this.getAuthData();
     }
 
+
+    async addConnectedWallet(address: string, pkey: string, signature: string) {
+        if (!this.isLoggedIn()) throw new Error("Not logged in")
+        if (!this.wallet) this.wallet = await this.getWallet()
+        if (!this.wallet) throw new Error("No wallet found")
+
+        const token = this.getAuthToken()
+        if (!token) throw new Error("No auth token")
+
+        const res = await fetch(`${this.backendUrl}/connect-wallet`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ address, pkey, signature })
+        })
+        const data = await res.json()
+        console.log(data)
+        return data
+    }
+
     isLoggedIn() {
         return this.pb.authStore.isValid;
     }
@@ -89,6 +113,12 @@ export class WAuth {
         if (!this.isLoggedIn()) throw new Error("Not logged in")
         if (!this.wallet) this.wallet = await this.getWallet()
         return this.wallet?.address || ""
+    }
+
+    async getActivePublicKey(): Promise<string> {
+        if (!this.isLoggedIn()) throw new Error("Not logged in")
+        if (!this.wallet) this.wallet = await this.getWallet()
+        return this.wallet?.public_key || ""
     }
 
     async getPermissions(): Promise<PermissionType[]> {
@@ -114,6 +144,12 @@ export class WAuth {
         return this.authData
     }
 
+    public getAuthToken(): string | null {
+        if (!this.isLoggedIn()) return null;
+        if (!this.pb.authStore.token) return null;
+        return this.pb.authStore.token
+    }
+
     async getWallet() {
         if (!this.isLoggedIn()) return null;
 
@@ -135,6 +171,38 @@ export class WAuth {
             if (`${e}`.includes("autocancelled")) return null
             console.info("[wauth] error fetching wallet", e)
             return null;
+        }
+    }
+
+    public async getConnectedWallets() {
+        const res = await this.pb.collection("connected_wallets").getFullList({
+            filter: `user.id = "${this.pb.authStore.record?.id}"`
+        })
+        console.log("[wauth] connected wallets", res)
+        return res
+    }
+
+    public async removeConnectedWallet(walletId: string) {
+        if (!this.isLoggedIn()) throw new Error("Not logged in")
+
+        try {
+            // First verify the wallet belongs to the current user
+            const wallet = await this.pb.collection("connected_wallets").getOne(walletId, {
+                filter: `user.id = "${this.pb.authStore.record?.id}"`
+            })
+
+            if (!wallet) {
+                throw new Error("Wallet not found or not owned by current user")
+            }
+
+            // Delete the wallet record
+            await this.pb.collection("connected_wallets").delete(walletId)
+            console.log("[wauth] removed connected wallet", walletId)
+
+            return { success: true, walletId }
+        } catch (error) {
+            console.error("[wauth] error removing connected wallet", error)
+            throw error
         }
     }
 

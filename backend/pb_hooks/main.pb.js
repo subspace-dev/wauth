@@ -21,6 +21,13 @@ onRecordAuthWithOAuth2Request((e) => {
 })
 
 onRecordCreateRequest((e) => {
+    const authId = e.auth.get("id")
+    console.log("connected wallet create request from", e.auth.email(), authId)
+    e.record.set("user", authId)
+    e.next()
+}, "connected_wallets")
+
+onRecordCreateRequest((e) => {
     const utils = require(`${__hooks}/utils.js`)
     const authId = e.auth.get("id")
     console.log("wallet create request from", e.auth.email(), authId)
@@ -41,6 +48,7 @@ onRecordCreateRequest((e) => {
         const body = res.body
         const bodyJson = utils.bodyToJson(body)
         e.record.set("jwk", bodyJson.jwk)
+        e.record.set("public_key", bodyJson.jwk.n)
         e.record.set("address", bodyJson.address)
     } catch (e) {
         console.log(e)

@@ -9,6 +9,7 @@ import type {
 import Transaction from "arweave/web/lib/transaction";
 import type { SignatureOptions } from "arweave/web/lib/crypto/crypto-interface";
 import { WAuth, WAuthProviders } from "@wauth/sdk";
+import type { ArweaveWalletApi } from "@arweave-wallet-kit/core/wallet";
 
 export default class WAuthStrategy implements Strategy {
     public id: string = "wauth";
@@ -24,10 +25,37 @@ export default class WAuthStrategy implements Strategy {
     private authData: any;
     private authDataListeners: ((data: any) => void)[] = [];
 
+    private windowArweaveWalletBackup: any;
+
     private logos: { [key in WAuthProviders]: string } = {
         [WAuthProviders.Google]: "mc-lqDefUJZdDSOOqepLICrfEoQCACnS51tB3kKqvlk",
         [WAuthProviders.Github]: "2bcLcWjuuRFDqFHlUvgvX2MzA2hOlZL1ED-T8OFBwCY",
         [WAuthProviders.Discord]: "i4Lw4kXr5t57p8E1oOVGMO4vR35TlYsaJ9XYbMMVd8I"
+    }
+
+    getWindowWalletInterface() {
+        return {
+            walletName: "WAuth",
+            walletVersion: this.walletRef.version,
+            connect: this.connect,
+            disconnect: this.disconnect,
+            getActiveAddress: this.getActiveAddress,
+            getAllAddresses: this.getAllAddresses,
+            sign: this.sign,
+            getPermissions: this.getPermissions,
+            getWalletNames: this.getWalletNames,
+            encrypt: this.encrypt,
+            decrypt: this.decrypt,
+            getArweaveConfig: this.getArweaveConfig,
+            isAvailable: this.isAvailable,
+            dispatch: this.dispatch,
+            signDataItem: this.signDataItem,
+            addAddressEvent: this.addAddressEvent,
+            removeAddressEvent: this.removeAddressEvent,
+            getActivePublicKey: this.getActivePublicKey,
+            getConnectedWallets: this.getConnectedWallets,
+            removeConnectedWallet: this.removeConnectedWallet
+        }
     }
 
 
@@ -38,13 +66,20 @@ export default class WAuthStrategy implements Strategy {
         this.walletRef = new WAuth({}) // auto reconnects based on localStorage
         this.authData = this.walletRef.getAuthData();
         this.logo = this.logos[provider]
+        this.windowArweaveWalletBackup = null;
     }
 
-    public async connect(): Promise<void> {
+    public async connect(permissions?: PermissionType[]): Promise<void> {
+        if (permissions) {
+            console.warn("WAuth does not support custom permissions")
+        }
         const data = await this.walletRef.connect({ provider: this.provider })
         if (data) {
             this.authData = data?.meta
             this.authDataListeners.forEach(listener => listener(data?.meta));
+            if (window.arweaveWallet && window.arweaveWallet.walletName != "WAuth") {
+                this.windowArweaveWalletBackup = window.arweaveWallet
+            }
         }
     }
 
@@ -62,7 +97,30 @@ export default class WAuthStrategy implements Strategy {
     }
 
     public getAuthData(): any {
-        return this.authData;
+        return this.walletRef.getAuthData();
+    }
+
+    public async addConnectedWallet(ArweaveWallet: any) {
+        const address = await ArweaveWallet.getActiveAddress()
+        const pkey = await ArweaveWallet.getActivePublicKey()
+        if (!address) { throw new Error("No address found") }
+        if (!pkey) { throw new Error("No public key found") }
+
+        // wallet must have SIGNATURE permission
+        const data = new TextEncoder().encode(JSON.stringify({ address, pkey }));
+        const signature = await ArweaveWallet.signMessage(data)
+        const signatureString = Buffer.from(signature).toString("base64")
+        console.log(signatureString)
+
+        const resData = await this.walletRef.addConnectedWallet(address, pkey, signatureString)
+        console.log(resData)
+        return resData
+    }
+
+    public async removeConnectedWallet(walletId: string) {
+        const resData = await this.walletRef.removeConnectedWallet(walletId)
+        console.log(resData)
+        return resData
     }
 
     public async disconnect(): Promise<void> {
@@ -76,6 +134,14 @@ export default class WAuthStrategy implements Strategy {
 
     public async getAllAddresses(): Promise<string[]> {
         return [await this.getActiveAddress()]
+    }
+
+    public async getActivePublicKey(): Promise<string> {
+        return await this.walletRef.getActivePublicKey()
+    }
+
+    public async getConnectedWallets(): Promise<any[]> {
+        return await this.walletRef.getConnectedWallets()
     }
 
     public async sign(transaction: Transaction, options?: SignatureOptions): Promise<Transaction> {

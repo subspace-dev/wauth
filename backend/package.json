@@ -20,6 +20,7 @@
     "arweave": "^1.15.7",
     "concurrently": "^9.2.0",
     "cross-fetch": "^4.1.0",
+    "dotenv": "^17.1.0",
     "eventsource": "^4.0.0",
     "hono": "^4.8.3",
     "pocketbase": "^0.26.1"

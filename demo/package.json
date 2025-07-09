@@ -12,7 +12,7 @@
   "dependencies": {
     "@arweave-wallet-kit/core": "^0.1.1",
     "@arweave-wallet-kit/react": "^0.3.2",
-    "@wauth/strategy": "^0.0.4",
+    "@wauth/strategy": "../strategy",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
