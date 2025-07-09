@@ -41,7 +41,7 @@
   "license": "MIT",
   "dependencies": {
     "@arweave-wallet-kit/core": "^0.1.1",
-    "@wauth/sdk": "@wauth/sdk@0.0.5"
+    "@wauth/sdk": "^0.0.5"
   },
   "devDependencies": {
     "@types/node": "^24.0.7",
