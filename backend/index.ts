@@ -129,10 +129,24 @@ app.post('/connect-wallet', async (c) => {
     // the record should be created using the auth users id
     const userClient = new Pocketbase(pbUrl)
     userClient.authStore.save(bearerToken!, null)
-    const user = await userClient.collection("users").authRefresh()
+
+    let user;
+    try {
+        user = await userClient.collection("users").authRefresh()
+    } catch (error) {
+        console.error('Auth refresh failed:', error)
+        return c.json({ error: "Token is expired or invalid. Please log in again." }, 401)
+    }
+
     const userId = user.record.id
 
-    const impersonatedClient = await pb.collection("users").impersonate(userId, 5 * 60)
+    let impersonatedClient;
+    try {
+        impersonatedClient = await pb.collection("users").impersonate(userId, 5 * 60)
+    } catch (error) {
+        console.error('User impersonation failed:', error)
+        return c.json({ error: "Failed to authenticate user. Please try again." }, 500)
+    }
 
     try {
         const res = await impersonatedClient.collection('connected_wallets').create({ address, public_key: pkey })
