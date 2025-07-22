@@ -3,7 +3,8 @@ import WAuthStrategy, { WAuthProviders } from "@wauth/strategy";
 const strategies: { [key: string]: WAuthStrategy } = {
     [WAuthProviders.Google]: new WAuthStrategy({ provider: WAuthProviders.Google }),
     [WAuthProviders.Github]: new WAuthStrategy({ provider: WAuthProviders.Github }),
-    [WAuthProviders.Discord]: new WAuthStrategy({ provider: WAuthProviders.Discord })
+    [WAuthProviders.Discord]: new WAuthStrategy({ provider: WAuthProviders.Discord }),
+    [WAuthProviders.X]: new WAuthStrategy({ provider: WAuthProviders.X })
 }
 
 export function getStrategy(provider: WAuthProviders): WAuthStrategy {
@@ -24,6 +25,8 @@ export function getActiveWAuthProvider(): WAuthProviders {
             return WAuthProviders.Github
         case WAuthProviders.Discord:
             return WAuthProviders.Discord
+        case WAuthProviders.X:
+            return WAuthProviders.X
         default:
             return null
     }

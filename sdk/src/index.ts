@@ -12,7 +12,8 @@ import axios from "axios";
 export enum WAuthProviders {
     Google = "google",
     Github = "github",
-    Discord = "discord"
+    Discord = "discord",
+    X = "twitter"
 }
 
 export enum WalletActions {

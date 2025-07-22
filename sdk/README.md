@@ -10,6 +10,15 @@ Install the SDK in your project:
 npm i @wauth/sdk@latest
 ```
 
+## Features
+
+- 🔐 Social Authentication (Google, GitHub, Discord)
+- 🔑 Arweave Wallet Compatibility
+- 📝 Transaction Signing
+- 🔄 Multiple Wallet Management
+- 🌐 AO Protocol Integration
+- 🔏 Data Signing
+
 ## Setup & Usage
 
 ### Basic Setup
@@ -56,16 +65,54 @@ WAuthProviders.Github   // "github"
 WAuthProviders.Discord  // "discord"
 ```
 
-### Injecting Global arweaveWallet
+### Wallet Management
 
-TODO
+```ts
+// Get connected wallets
+const wallets = await wauth.getConnectedWallets();
 
-### React Example
+// Add a new wallet
+await wauth.addConnectedWallet(window.arweaveWallet);
 
-Check [subspace](https://github.com/subspace-dev/app) source code for reference on the implementation in a prod app
-- use-wallet.ts - wallet connection manager hook
+// Remove a wallet
+await wauth.removeConnectedWallet(walletId);
+```
 
-On successful implementation, users will see a seamless social authentication flow that creates an Arweave-compatible wallet.
+### Transaction & Data Signing
+
+```ts
+// Sign a transaction
+const transaction = await arweave.createTransaction({
+    data: new TextEncoder().encode("Hello WAuth!")
+});
+const signedTx = await wauth.sign(transaction);
+
+// Sign raw data
+const signature = await wauth.signature("Data to sign");
+
+// Get AO Protocol signer
+const signer = wauth.getAoSigner();
+const ao = connect({ MODE: "legacy" });
+const res = await ao.message({
+    process: processId,
+    data: "Hello AO!",
+    tags: [{ name: "Action", value: "Info" }],
+    signer: signer
+});
+```
+
+## Integration with Arweave Wallet Kit
+
+For React applications, we recommend using `@wauth/strategy` with Arweave Wallet Kit for a seamless integration. Check out the [strategy package](https://github.com/ankushKun/wauth/tree/main/strategy) for more details.
+
+## Demo
+
+Check out our [live demo](https://github.com/ankushKun/wauth/tree/main/demo) to see WAuth in action with all features:
+- Social Authentication
+- Wallet Management
+- Transaction Signing
+- Data Signing
+- AO Protocol Integration
 
 ![WAuth SDK Demo](https://raw.githubusercontent.com/ankushKun/wauth/refs/heads/main/assets/sdk.gif)
 

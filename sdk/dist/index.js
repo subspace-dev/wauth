@@ -9,6 +9,7 @@ export var WAuthProviders;
     WAuthProviders["Google"] = "google";
     WAuthProviders["Github"] = "github";
     WAuthProviders["Discord"] = "discord";
+    WAuthProviders["X"] = "twitter";
 })(WAuthProviders || (WAuthProviders = {}));
 export var WalletActions;
 (function (WalletActions) {

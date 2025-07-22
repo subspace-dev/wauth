@@ -1,69 +1,116 @@
-# React + TypeScript + Vite
+# WAuth Demo
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A comprehensive demo showcasing Web2 social authentication for Arweave applications using WAuth and Arweave Wallet Kit.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 🔐 Social Authentication with multiple providers:
+  - Google
+  - GitHub
+  - Discord
+- 🔑 Multiple Wallet Management
+- 📝 Transaction Signing
+- 🔏 Data Signing
+- 🌐 AO Protocol Integration
+- 🎨 Modern UI with Dark Mode
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Prerequisites
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Node.js 16+
+- npm or bun
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+### Installation
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+1. Clone the repository:
+```bash
+git clone https://github.com/ankushKun/wauth.git
+cd wauth/demo
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+2. Install dependencies:
+```bash
+npm install
+# or
+bun install
 ```
+
+3. Start the development server:
+```bash
+npm run dev
+# or
+bun run dev
+```
+
+The app will be available at `http://localhost:5174`
+
+## Implementation Details
+
+### 1. Dependencies
+
+```json
+{
+  "dependencies": {
+    "@arweave-wallet-kit/core": "^0.1.1",
+    "@arweave-wallet-kit/react": "^0.3.2",
+    "@permaweb/aoconnect": "^0.0.85",
+    "@wauth/strategy": "../strategy",
+    "arweave": "2.0.0-ec.1"
+  }
+}
+```
+
+### 2. WAuth Strategy Setup
+
+```ts
+// lib/strategy.ts
+import WAuthStrategy, { WAuthProviders } from "@wauth/strategy";
+
+const strategies = {
+    [WAuthProviders.Google]: new WAuthStrategy({ provider: WAuthProviders.Google }),
+    [WAuthProviders.Github]: new WAuthStrategy({ provider: WAuthProviders.Github }),
+    [WAuthProviders.Discord]: new WAuthStrategy({ provider: WAuthProviders.Discord })
+};
+
+export function getStrategy(provider: WAuthProviders): WAuthStrategy {
+    return strategies[provider]
+}
+```
+
+### 3. Arweave Wallet Kit Integration
+
+```tsx
+// main.tsx
+export default function Main() {
+    const strategies = [
+        getStrategy(WAuthProviders.Github),
+        getStrategy(WAuthProviders.Google),
+        getStrategy(WAuthProviders.Discord)
+    ]
+
+    return (
+        <ArweaveWalletKit
+            config={{
+                strategies: strategies as Strategy[],
+                permissions: ["ACCESS_ADDRESS", "SIGN_TRANSACTION"]
+            }}>
+            <App />
+        </ArweaveWalletKit>
+    )
+}
+```
+
+### 4. Features Implementation
+
+- **Wallet Connection**: Uses `ConnectButton` from Arweave Wallet Kit
+- **Multiple Wallets**: Manage multiple wallets per account
+- **Transaction Signing**: Sign and post Arweave transactions
+- **Data Signing**: Sign arbitrary data
+- **AO Protocol**: Send messages to AO processes
+
+## Learn More
+
+- [@wauth/sdk Documentation](../sdk/README.md)
+- [@wauth/strategy Documentation](../strategy/README.md)
+- [Arweave Wallet Kit Documentation](https://docs.arweavekit.com/wallets/introduction)

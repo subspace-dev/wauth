@@ -6,7 +6,8 @@ import { type DataItem as ArConnectDataItem } from "arconnect";
 export declare enum WAuthProviders {
     Google = "google",
     Github = "github",
-    Discord = "discord"
+    Discord = "discord",
+    X = "twitter"
 }
 export declare enum WalletActions {
     SIGN = "sign",

@@ -11,7 +11,8 @@ export default function Main() {
   const strategies = [
     getStrategy(WAuthProviders.Github),
     getStrategy(WAuthProviders.Google),
-    getStrategy(WAuthProviders.Discord)
+    getStrategy(WAuthProviders.Discord),
+    getStrategy(WAuthProviders.X)
   ]
 
   return <ArweaveWalletKit

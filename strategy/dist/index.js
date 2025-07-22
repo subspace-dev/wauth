@@ -18,7 +18,8 @@ export default class WAuthStrategy {
     logos = {
         [WAuthProviders.Google]: "mc-lqDefUJZdDSOOqepLICrfEoQCACnS51tB3kKqvlk",
         [WAuthProviders.Github]: "2bcLcWjuuRFDqFHlUvgvX2MzA2hOlZL1ED-T8OFBwCY",
-        [WAuthProviders.Discord]: "i4Lw4kXr5t57p8E1oOVGMO4vR35TlYsaJ9XYbMMVd8I"
+        [WAuthProviders.Discord]: "i4Lw4kXr5t57p8E1oOVGMO4vR35TlYsaJ9XYbMMVd8I",
+        [WAuthProviders.X]: "WEcpgXgwGO1PwuIAucwXHUiJ5HWHwkaYTUaAN4wlqQA"
     };
     getWindowWalletInterface() {
         return {
@@ -46,6 +47,7 @@ export default class WAuthStrategy {
     }
     constructor({ provider }) {
         this.provider = provider;
+        console.log("provider", provider);
         this.id = this.id + "-" + this.provider;
         this.name = `${this.provider.charAt(0).toUpperCase() + this.provider.slice(1).toLowerCase()}`;
         this.walletRef = new WAuth({}); // auto reconnects based on localStorage

@@ -30,7 +30,8 @@ export default class WAuthStrategy implements Strategy {
     private logos: { [key in WAuthProviders]: string } = {
         [WAuthProviders.Google]: "mc-lqDefUJZdDSOOqepLICrfEoQCACnS51tB3kKqvlk",
         [WAuthProviders.Github]: "2bcLcWjuuRFDqFHlUvgvX2MzA2hOlZL1ED-T8OFBwCY",
-        [WAuthProviders.Discord]: "i4Lw4kXr5t57p8E1oOVGMO4vR35TlYsaJ9XYbMMVd8I"
+        [WAuthProviders.Discord]: "i4Lw4kXr5t57p8E1oOVGMO4vR35TlYsaJ9XYbMMVd8I",
+        [WAuthProviders.X]: "WEcpgXgwGO1PwuIAucwXHUiJ5HWHwkaYTUaAN4wlqQA"
     }
 
     getWindowWalletInterface() {
@@ -61,6 +62,7 @@ export default class WAuthStrategy implements Strategy {
 
     constructor({ provider }: { provider: WAuthProviders }) {
         this.provider = provider
+        console.log("provider", provider)
         this.id = this.id + "-" + this.provider
         this.name = `${this.provider.charAt(0).toUpperCase() + this.provider.slice(1).toLowerCase()}`
         this.walletRef = new WAuth({}) // auto reconnects based on localStorage
@@ -150,7 +152,7 @@ export default class WAuthStrategy implements Strategy {
     }
 
     public async sign(transaction: Transaction, options?: SignatureOptions): Promise<Transaction> {
-        return await this.walletRef.sign(transaction, options)
+        return await this.walletRef.sign(transaction as any, options)
     }
 
     public async getPermissions(): Promise<PermissionType[]> {
