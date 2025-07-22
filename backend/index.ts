@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import Arweave from 'arweave/node'
+import Arweave from 'arweave/web'
 import Pocketbase from 'pocketbase'
 import dotenv from 'dotenv'
 import { cors } from 'hono/cors'
@@ -62,7 +62,7 @@ async function validateSignature(address: string, publicKeyString: string, signa
         const originalData = JSON.stringify(signedData);
         const data = new TextEncoder().encode(originalData);
 
-        console.log('Validating signature for data:', originalData);
+        // console.log('Validating signature for data:', originalData);
 
         // Hash the data using SHA-256 (same as Wander/ArConnect does)
         const hash = await crypto.subtle.digest('SHA-256', data);
@@ -152,7 +152,7 @@ app.post('/connect-wallet', async (c) => {
 
     try {
         const res = await impersonatedClient.collection('connected_wallets').create({ address, public_key: pkey })
-        console.log(res)
+        // console.log(res)
         return c.json({ success: true }, 200)
     } catch (e) {
         console.log(e)
@@ -217,9 +217,7 @@ app.post('/wallet-action', async (c) => {
         case WalletActions.SIGN:
             const txPayload = payload.transaction
             const tx = ar.transactions.fromRaw(txPayload)
-            console.log("tx", tx)
             await ar.transactions.sign(tx, jwk)
-            console.log("signedTx", tx)
             return c.json({ ...tx.toJSON() }, 200)
             // await ar.transactions.sign(transaction, jwk)
             // return c.json({ ...transaction }, 200)
@@ -277,7 +275,6 @@ app.post('/wallet-action', async (c) => {
 
 app.post('/raw-data-item', async (c) => {
     const raw = await c.req.arrayBuffer()
-    console.log("raw", raw)
     const dataItem = new DataItem(Buffer.from(raw))
     const isValid = await dataItem.isValid()
     return c.json({ isValid }, 200)

@@ -1,9 +1,9 @@
 import PocketBase, { type RecordAuthResponse, type RecordModel } from "pocketbase"
 import Arweave from "arweave"
 import type { GatewayConfig, PermissionType } from "arconnect";
-import type { Tag } from "arweave/node/lib/transaction";
-import type Transaction from "arweave/node/lib/transaction";
-import type { SignatureOptions } from "arweave/node/lib/crypto/crypto-interface";
+import type { Tag } from "arweave/web/lib/transaction";
+import Transaction from "arweave/web/lib/transaction";
+import type { SignatureOptions } from "arweave/web/lib/crypto/crypto-interface";
 import { type DataItem } from "arconnect";
 import axios from "axios";
 
@@ -75,8 +75,6 @@ export class WAuth {
         if (!this.wallet) this.wallet = await this.getWallet()
         if (!this.wallet) throw new Error("[wauth] No wallet found")
 
-        console.log(payload)
-
         switch (action) {
             case WalletActions.SIGN:
                 // check for Action=Transfer Tag and ask user for approval
@@ -131,10 +129,6 @@ export class WAuth {
             },
             responseType: 'json'  // This tells axios to return raw binary data
         })
-        // console.log("res headers", res.headers)
-
-        // const data = res.data  // This will now be an ArrayBuffer
-        // console.log("data", data)
         return res.data
     }
 

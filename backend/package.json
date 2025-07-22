@@ -21,7 +21,7 @@
     "@dha-team/arbundles": "^1.0.3",
     "@permaweb/aoconnect": "0.0.69",
     "arconnect": "^1.0.4",
-    "arweave": "^1.15.7",
+    "arweave": "2.0.0-ec.1",
     "axios": "^1.10.0",
     "concurrently": "^9.2.0",
     "cross-fetch": "^4.1.0",

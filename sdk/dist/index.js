@@ -1,5 +1,6 @@
 import PocketBase, {} from "pocketbase";
 import Arweave from "arweave";
+import Transaction from "arweave/web/lib/transaction";
 import {} from "arconnect";
 import axios from "axios";
 export var WAuthProviders;
@@ -63,7 +64,6 @@ export class WAuth {
             this.wallet = await this.getWallet();
         if (!this.wallet)
             throw new Error("[wauth] No wallet found");
-        console.log(payload);
         switch (action) {
             case WalletActions.SIGN:
                 // check for Action=Transfer Tag and ask user for approval
@@ -112,9 +112,6 @@ export class WAuth {
             },
             responseType: 'json' // This tells axios to return raw binary data
         });
-        // console.log("res headers", res.headers)
-        // const data = res.data  // This will now be an ArrayBuffer
-        // console.log("data", data)
         return res.data;
     }
     async connect({ provider, scopes }) {

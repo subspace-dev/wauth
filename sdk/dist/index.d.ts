@@ -1,7 +1,7 @@
 import PocketBase, { type RecordAuthResponse, type RecordModel } from "pocketbase";
 import type { GatewayConfig, PermissionType } from "arconnect";
-import type Transaction from "arweave/node/lib/transaction";
-import type { SignatureOptions } from "arweave/node/lib/crypto/crypto-interface";
+import Transaction from "arweave/web/lib/transaction";
+import type { SignatureOptions } from "arweave/web/lib/crypto/crypto-interface";
 import { type DataItem } from "arconnect";
 export declare enum WAuthProviders {
     Google = "google",

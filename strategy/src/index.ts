@@ -9,10 +9,7 @@ import type {
 import Transaction from "arweave/web/lib/transaction";
 import type { SignatureOptions } from "arweave/web/lib/crypto/crypto-interface";
 import { WAuth, WAuthProviders } from "@wauth/sdk";
-import type { ArweaveWalletApi } from "@arweave-wallet-kit/core/wallet";
-import { ArweaveSigner, createData, DataItem } from "@dha-team/arbundles";
-import Arweave from "arweave/web";
-import axios from "axios";
+import { DataItem } from "@dha-team/arbundles/web";
 
 export default class WAuthStrategy implements Strategy {
     public id: string = "wauth";
@@ -206,15 +203,9 @@ export default class WAuthStrategy implements Strategy {
 
     public getAoSigner() {
         return async (create: any, createDataItem: any) => {
-            console.log("create", create)
-            console.log("createDataItem", createDataItem)
             const { data, tags, target, anchor } = await create({ alg: 'rsa-v1_5-sha256', passthrough: true });
             const signedDataItem = await this.signAns104({ data, tags, target, anchor })
-
             const dataItem = new DataItem(Buffer.from(signedDataItem.raw))
-            const valid = await dataItem.isValid()
-            console.log("valid", valid)
-
             return { id: dataItem.id, raw: dataItem.getRaw() }
         }
     }

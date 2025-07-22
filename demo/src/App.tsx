@@ -3,9 +3,7 @@ import { fixConnection, WAuthProviders } from "@wauth/strategy"
 import { useEffect, useState } from "react"
 import { getActiveWAuthProvider, getStrategy } from "../lib/strategy"
 import { connect, createDataItemSigner, message } from "@permaweb/aoconnect"
-import Transaction from "arweave/web/lib/transaction"
-import Arweave from "arweave"
-import { ArweaveSigner, createData, DataItem } from "@dha-team/arbundles/web"
+import Arweave from "arweave/web"
 
 function App() {
   const address = useActiveAddress()
@@ -18,6 +16,7 @@ function App() {
   const [signedData, setSignedData] = useState<string | null>(null)
   const [processId, setProcessId] = useState<string | null>("0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc")
   const [dataText, setDataText] = useState<string | null>("Hello WAuth!")
+  const [aoMsgId, setAoMsgId] = useState<string | null>(null)
 
   const { connected, disconnect } = useConnection()
 
@@ -123,9 +122,11 @@ function App() {
   }, [connected])
 
   async function signTransaction() {
+    const ar = Arweave.init({})
+
     const strategy = getStrategy(getActiveWAuthProvider())
     const dataUint8Array = new TextEncoder().encode(dataToSign)
-    const transaction = new Transaction({
+    const transaction = await ar.createTransaction({
       data: dataUint8Array
     })
     transaction.addTag("Action", "Info")
@@ -133,20 +134,22 @@ function App() {
     console.log(signedTransaction)
     setSignedData("signature: " + signedTransaction.signature)
     // submit transaction
-    const ar = Arweave.init({})
     const res = await ar.transactions.post(signedTransaction)
     console.log("res", res)
 
-    // const ar = Arweave.init({})
-    // const jwk = await ar.wallets.generate()
-    // const testTx = await ar.createTransaction({
-    //   // data: dataUint8Array,
-    //   // tags: []
-    // })
-    // console.log("testTx", testTx)
-    // await ar.transactions.sign(testTx, jwk)
-    // console.log("testTx signed", testTx)
 
+    // sample using ar
+    // const ar = Arweave.init({})
+    // console.log("----------- sample ------------")
+    // const jwk = await ar.wallets.generate()
+    // const tx = await ar.createTransaction({
+    //   data: dataToSign
+    // })
+    // console.log("transaction", tx)
+    // await ar.transactions.sign(tx, jwk)
+    // console.log("transaction", tx)
+    // const res1 = await ar.transactions.post(tx)
+    // console.log("res1", res1)
   }
 
 
@@ -154,43 +157,16 @@ function App() {
   async function sendAoMessage() {
     const strategy = getStrategy(getActiveWAuthProvider())
     const signer = strategy.getAoSigner()
-    console.log(processId, dataText)
-
-    // this function works as the signer
-    // function createDataItemSignerManual(jwk) {
-    //   const newSigner = async (create, createDataItem = (buf) => new DataItem(buf)) => {
-    //     console.log("create", create)
-    //     console.log("createDataItem", createDataItem)
-
-    //     const { data, tags, target, anchor } = await create({ alg: 'rsa-v1_5-sha256', passthrough: true })
-    //     return signer({ data, tags, target, anchor })
-    //   }
-    //   const signer = async ({ data, tags, target, anchor }) => {
-    //     console.log("data", data)
-    //     console.log("tags", tags)
-    //     console.log("target", target)
-    //     console.log("anchor", anchor)
-    //     const signer = new ArweaveSigner(jwk)
-    //     const dataItem = createData(data, signer, { tags, target, anchor })
-    //     return dataItem.sign(signer)
-    //       .then(async () => ({
-    //         id: await dataItem.id,
-    //         raw: await dataItem.getRaw()
-    //       }))
-    //   }
-
-    //   return newSigner
-    // }
 
     const ao = connect({ MODE: "legacy" })
     const res = await ao.message({
       process: processId,
       data: dataText,
-      anchor: "1".padEnd(32, "0"),
       tags: [{ name: "Action", value: "Info" }],
       signer: signer
     })
     console.log(res)
+    setAoMsgId(res)
   }
 
   return (
@@ -261,6 +237,9 @@ function App() {
                     onChange={(e) => setDataText(e.target.value)} />
                 </div>
                 <button className="btn ao-btn" onClick={sendAoMessage}>Send Ao Message</button>
+                {aoMsgId && <a href={`https://aolink.arnode.asia/#/message/${aoMsgId}`} target="_blank" rel="noopener noreferrer">
+                  <button className="btn">View on AO Link</button>
+                </a>}
               </div>
             </div>
 

@@ -20,6 +20,10 @@ body {
     min-height: 100vh;
 }
 
+button {
+    cursor: pointer;
+}
+
 .app {
     min-height: 100vh;
     display: flex;

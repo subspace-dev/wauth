@@ -15,6 +15,7 @@
     "@dha-team/arbundles": "^1.0.3",
     "@permaweb/aoconnect": "^0.0.85",
     "@wauth/strategy": "../strategy",
+    "arweave": "2.0.0-ec.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "vite-plugin-node-polyfills": "0.21.0"

@@ -1,6 +1,6 @@
 {
   "name": "@wauth/strategy",
-  "version": "0.0.5",
+  "version": "0.0.7",
   "description": "WAuth strategy for Arweave Wallet Kit",
   "repository": {
     "type": "git",
@@ -49,7 +49,7 @@
   "devDependencies": {
     "@types/node": "^24.0.7",
     "arconnect": "^1.0.4",
-    "arweave": "^1.15.7",
+    "arweave": "^2.0.0-ec.1",
     "typescript": "^5.8.3"
   }
 }
