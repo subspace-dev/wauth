@@ -21,6 +21,7 @@ export default class WAuthStrategy implements Strategy {
     private walletRef: WAuth;
     private provider: WAuthProviders;
     private addressListeners: ((address: string) => void)[] = [];
+    private scopes: string[];
 
     private authData: any;
     private authDataListeners: ((data: any) => void)[] = [];
@@ -60,8 +61,9 @@ export default class WAuthStrategy implements Strategy {
     }
 
 
-    constructor({ provider }: { provider: WAuthProviders }) {
+    constructor({ provider, scopes = [] }: { provider: WAuthProviders, scopes?: string[] }) {
         this.provider = provider
+        this.scopes = scopes
         console.log("provider", provider)
         this.id = this.id + "-" + this.provider
         this.name = `${this.provider.charAt(0).toUpperCase() + this.provider.slice(1).toLowerCase()}`
@@ -80,7 +82,8 @@ export default class WAuthStrategy implements Strategy {
         if (permissions) {
             console.warn("WAuth does not support custom permissions")
         }
-        const data = await this.walletRef.connect({ provider: this.provider })
+        console.log("scopes", this.scopes)
+        const data = await this.walletRef.connect({ provider: this.provider, scopes: this.scopes })
         if (data) {
             this.authData = data?.meta
             this.authDataListeners.forEach(listener => listener(data?.meta));
@@ -88,7 +91,7 @@ export default class WAuthStrategy implements Strategy {
     }
 
     public async reconnect(): Promise<any> {
-        const data = await this.walletRef.connect({ provider: this.provider })
+        const data = await this.walletRef.connect({ provider: this.provider, scopes: this.scopes })
         if (data) {
             this.authData = data?.meta
             this.authDataListeners.forEach(listener => listener(this.authData));

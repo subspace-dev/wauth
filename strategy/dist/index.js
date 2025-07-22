@@ -12,6 +12,7 @@ export default class WAuthStrategy {
     walletRef;
     provider;
     addressListeners = [];
+    scopes;
     authData;
     authDataListeners = [];
     windowArweaveWalletBackup;
@@ -45,8 +46,9 @@ export default class WAuthStrategy {
             removeConnectedWallet: this.removeConnectedWallet
         };
     }
-    constructor({ provider }) {
+    constructor({ provider, scopes = [] }) {
         this.provider = provider;
+        this.scopes = scopes;
         console.log("provider", provider);
         this.id = this.id + "-" + this.provider;
         this.name = `${this.provider.charAt(0).toUpperCase() + this.provider.slice(1).toLowerCase()}`;
@@ -64,14 +66,15 @@ export default class WAuthStrategy {
         if (permissions) {
             console.warn("WAuth does not support custom permissions");
         }
-        const data = await this.walletRef.connect({ provider: this.provider });
+        console.log("scopes", this.scopes);
+        const data = await this.walletRef.connect({ provider: this.provider, scopes: this.scopes });
         if (data) {
             this.authData = data?.meta;
             this.authDataListeners.forEach(listener => listener(data?.meta));
         }
     }
     async reconnect() {
-        const data = await this.walletRef.connect({ provider: this.provider });
+        const data = await this.walletRef.connect({ provider: this.provider, scopes: this.scopes });
         if (data) {
             this.authData = data?.meta;
             this.authDataListeners.forEach(listener => listener(this.authData));

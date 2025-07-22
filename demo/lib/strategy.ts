@@ -2,7 +2,7 @@ import WAuthStrategy, { WAuthProviders } from "@wauth/strategy";
 
 const strategies: { [key: string]: WAuthStrategy } = {
     [WAuthProviders.Google]: new WAuthStrategy({ provider: WAuthProviders.Google }),
-    [WAuthProviders.Github]: new WAuthStrategy({ provider: WAuthProviders.Github }),
+    [WAuthProviders.Github]: new WAuthStrategy({ provider: WAuthProviders.Github, scopes: ["read:org"] }),
     [WAuthProviders.Discord]: new WAuthStrategy({ provider: WAuthProviders.Discord }),
     [WAuthProviders.X]: new WAuthStrategy({ provider: WAuthProviders.X })
 }

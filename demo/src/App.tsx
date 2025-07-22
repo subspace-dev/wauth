@@ -41,6 +41,11 @@ function App() {
   //   setAccessToken(data.accessToken)
   //   setEmail(data.email)
   // })
+  api?.onAuthDataChange((data) => {
+    console.log("[app] auth data changed", data)
+    setAccessToken(data.accessToken)
+    setEmail(data.email)
+  })
 
   // Function to fetch connected wallets
   const fetchConnectedWallets = async () => {

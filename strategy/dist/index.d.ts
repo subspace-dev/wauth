@@ -13,6 +13,7 @@ export default class WAuthStrategy implements Strategy {
     private walletRef;
     private provider;
     private addressListeners;
+    private scopes;
     private authData;
     private authDataListeners;
     private windowArweaveWalletBackup;
@@ -46,8 +47,9 @@ export default class WAuthStrategy implements Strategy {
             walletId: string;
         }>;
     };
-    constructor({ provider }: {
+    constructor({ provider, scopes }: {
         provider: WAuthProviders;
+        scopes?: string[];
     });
     connect(permissions?: PermissionType[]): Promise<void>;
     reconnect(): Promise<any>;
