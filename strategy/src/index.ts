@@ -108,18 +108,17 @@ export default class WAuthStrategy implements Strategy {
         if (!address) { throw new Error("No address found") }
         if (!pkey) { throw new Error("No public key found") }
 
-        // Create message data and encode it
-        const messageData = { address, pkey };
-        const data = new TextEncoder().encode(JSON.stringify(messageData));
+        // Connect with SIGNATURE permission if not already connected
+        await ArweaveWallet.connect(["SIGNATURE"])
 
-        // Sign the message using SHA-256 hashing (Wander's default)
-        const signature = await ArweaveWallet.signMessage(data, {
-            hashAlgorithm: "SHA-256"
-        });
+        // Create message data and encode it - exactly as shown in docs
+        const data = new TextEncoder().encode(JSON.stringify({ address, pkey }));
+
+        // Sign the message - Wander will hash it internally with SHA-256
+        const signature = await ArweaveWallet.signMessage(data);
         const signatureString = Buffer.from(signature).toString("base64")
 
         const resData = await this.walletRef.addConnectedWallet(address, pkey, signatureString)
-        console.log(resData)
         return resData
     }
 

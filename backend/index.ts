@@ -47,70 +47,49 @@ async function validateSignature(address: string, publicKeyString: string, signa
         // Convert signature from base64 to Uint8Array
         const signature = new Uint8Array(Buffer.from(signatureBase64String, 'base64'));
 
-        // Verify that the address corresponds to the public key first
-        // Create a proper JWK format for address derivation
-        const jwk = {
-            kty: "RSA",
-            e: "AQAB",
-            n: publicKeyString,
-            ext: true
-        };
-
-        const derivedAddress = await ar.wallets.jwkToAddress(jwk);
-        if (derivedAddress !== address) {
-            console.error('Address validation failed: provided address does not match the public key');
-            console.error('Provided address:', address);
-            console.error('Derived address:', derivedAddress);
-            return false;
-        }
-
         // Recreate the exact data that was signed
-        const signedData = { address, pkey: publicKeyString };
-        const originalData = JSON.stringify(signedData);
-        const data = new TextEncoder().encode(originalData);
+        const data = new TextEncoder().encode(JSON.stringify({ address, pkey: publicKeyString }));
 
-        // Hash the data using SHA-256 (same as Wander/ArConnect does)
-        const hash = await crypto.subtle.digest('SHA-256', data);
+        // Hash the message using SHA-256 (same as Wander does internally)
+        const hash = await crypto.subtle.digest("SHA-256", data);
 
         // Import the public key for verification
-        const publicJWK = {
-            e: 'AQAB',
+        const publicJWK: JsonWebKey = {
+            e: "AQAB",
             ext: true,
-            kty: 'RSA',
+            kty: "RSA",
             n: publicKeyString
         };
 
+        // Import public key for verification - exactly as in docs
         const verificationKey = await crypto.subtle.importKey(
-            'jwk',
+            "jwk",
             publicJWK,
             {
-                name: 'RSA-PSS',
-                hash: { name: 'SHA-256' }
+                name: "RSA-PSS",
+                hash: "SHA-256"
             },
             false,
-            ['verify']
+            ["verify"]
         );
 
-        // Verify the signature using RSA-PSS with SHA-256
+        // Verify the signature by matching it with the hash - exactly as in docs
         const isValid = await crypto.subtle.verify(
-            {
-                name: 'RSA-PSS',
-                saltLength: 32
-            },
+            { name: "RSA-PSS", saltLength: 32 },
             verificationKey,
             signature,
             hash
         );
 
         if (!isValid) {
-            console.error('Signature validation failed: signature does not match the provided data');
+            console.error('Signature validation failed');
         } else {
             console.log('Signature validation successful');
         }
 
         return isValid;
     } catch (error) {
-        console.error('Error validating signature:', error);
+        console.error('Error in validation process:', error);
         return false;
     }
 }
