@@ -48,7 +48,15 @@ async function validateSignature(address: string, publicKeyString: string, signa
         const signature = new Uint8Array(Buffer.from(signatureBase64String, 'base64'));
 
         // Verify that the address corresponds to the public key first
-        const derivedAddress = await ar.wallets.getAddress({ n: publicKeyString, e: 'AQAB', kty: 'RSA' });
+        // Create a proper JWK format for address derivation
+        const jwk = {
+            kty: "RSA",
+            e: "AQAB",
+            n: publicKeyString,
+            ext: true
+        };
+
+        const derivedAddress = await ar.wallets.jwkToAddress(jwk);
         if (derivedAddress !== address) {
             console.error('Address validation failed: provided address does not match the public key');
             console.error('Provided address:', address);
@@ -56,13 +64,10 @@ async function validateSignature(address: string, publicKeyString: string, signa
             return false;
         }
 
-        // Recreate the exact data that was signed (address + public key)
-        // This must match exactly what was signed in the strategy: JSON.stringify({ address, pkey })
+        // Recreate the exact data that was signed
         const signedData = { address, pkey: publicKeyString };
         const originalData = JSON.stringify(signedData);
         const data = new TextEncoder().encode(originalData);
-
-        // console.log('Validating signature for data:', originalData);
 
         // Hash the data using SHA-256 (same as Wander/ArConnect does)
         const hash = await crypto.subtle.digest('SHA-256', data);
@@ -80,15 +85,18 @@ async function validateSignature(address: string, publicKeyString: string, signa
             publicJWK,
             {
                 name: 'RSA-PSS',
-                hash: 'SHA-256'
+                hash: { name: 'SHA-256' }
             },
             false,
             ['verify']
         );
 
-        // Verify the signature matches the hash of the signed data
+        // Verify the signature using RSA-PSS with SHA-256
         const isValid = await crypto.subtle.verify(
-            { name: 'RSA-PSS', saltLength: 32 },
+            {
+                name: 'RSA-PSS',
+                saltLength: 32
+            },
             verificationKey,
             signature,
             hash
@@ -184,7 +192,8 @@ export enum WalletActions {
     ENCRYPT = "encrypt",
     DECRYPT = "decrypt",
     DISPATCH = "dispatch",
-    SIGN_DATA_ITEM = "signDataItem"
+    SIGN_DATA_ITEM = "signDataItem",
+    SIGNATURE = "signature"
 }
 
 app.post('/wallet-action', async (c) => {
@@ -213,6 +222,8 @@ app.post('/wallet-action', async (c) => {
         return c.json({ error: "No JWK found" }, 400)
     }
 
+    const signer = new ArweaveSigner(jwk)
+
     switch (action) {
         case WalletActions.SIGN:
             const txPayload = payload.transaction
@@ -232,7 +243,6 @@ app.post('/wallet-action', async (c) => {
             const dataItem = payload.dataItem
             // console.log("dataItem", dataItem)
 
-            const signer = new ArweaveSigner(jwk)
             const createdDataItem = createData(dataItem.data, signer, { tags: dataItem.tags, anchor: dataItem.anchor, target: dataItem.target })
             await createdDataItem.sign(signer)
 
@@ -264,6 +274,12 @@ app.post('/wallet-action', async (c) => {
 
 
             return c.json({ id: newdataitem.id, raw: newdataitem.getRaw() }, 200)
+            break;
+        case WalletActions.SIGNATURE:
+            const uint8array = Buffer.from(Object.values(payload.data))
+            const signature = await signer.sign(uint8array)
+
+            return c.json({ ...signature }, 200)
             break;
         default:
             return c.json({ error: "Invalid action" }, 400)

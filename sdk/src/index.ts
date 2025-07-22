@@ -4,7 +4,8 @@ import type { GatewayConfig, PermissionType } from "arconnect";
 import type { Tag } from "arweave/web/lib/transaction";
 import Transaction from "arweave/web/lib/transaction";
 import type { SignatureOptions } from "arweave/web/lib/crypto/crypto-interface";
-import { type DataItem } from "arconnect";
+import { type DataItem as ArConnectDataItem } from "arconnect";
+import { DataItem } from "@dha-team/arbundles";
 import axios from "axios";
 
 
@@ -19,7 +20,8 @@ export enum WalletActions {
     ENCRYPT = "encrypt",
     DECRYPT = "decrypt",
     DISPATCH = "dispatch",
-    SIGN_DATA_ITEM = "signDataItem"
+    SIGN_DATA_ITEM = "signDataItem",
+    SIGNATURE = "signature"
 }
 
 export class WAuth {
@@ -300,8 +302,31 @@ export class WAuth {
         return await this.runAction(WalletActions.SIGN, { transaction: transaction.toJSON() })
     }
 
-    public async signDataItem(dataItem: DataItem): Promise<{ id: string, raw: ArrayBuffer }> {
+    public async signature(data: Uint8Array, algorithm?: AlgorithmIdentifier | RsaPssParams | EcdsaParams): Promise<Uint8Array> {
+        if (algorithm) {
+            console.warn("[wauth] Signature algorithm is not supported and Rsa4096Pss will be used by default")
+        }
+        return Object.values(await this.runAction(WalletActions.SIGNATURE, { data })) as any
+    }
+
+    public async signAns104(dataItem: ArConnectDataItem): Promise<{ id: string, raw: ArrayBuffer }> {
         return await this.runAction(WalletActions.SIGN_DATA_ITEM, { dataItem })
+    }
+
+    public async signDataItem(dataItem: ArConnectDataItem): Promise<ArrayBuffer> {
+        return (await this.runAction(WalletActions.SIGN_DATA_ITEM, { dataItem })).raw
+    }
+
+    public getAoSigner() {
+        if (!this.isLoggedIn()) throw new Error("Not logged in")
+        if (!this.wallet) throw new Error("No wallet found")
+
+        return async (create: any, createDataItem: any) => {
+            const { data, tags, target, anchor } = await create({ alg: 'rsa-v1_5-sha256', passthrough: true });
+            const signedDataItem = await this.signAns104({ data, tags, target, anchor })
+            const dataItem = new DataItem(Buffer.from(signedDataItem.raw))
+            return { id: dataItem.id, raw: dataItem.getRaw() }
+        }
     }
 
     public logout() {

@@ -1,12 +1,13 @@
-import { ConnectButton, useActiveAddress, useConnection } from "@arweave-wallet-kit/react"
+import { ConnectButton, useActiveAddress, useApi, useConnection } from "@arweave-wallet-kit/react"
 import { fixConnection, WAuthProviders } from "@wauth/strategy"
 import { useEffect, useState } from "react"
-import { getActiveWAuthProvider, getStrategy } from "../lib/strategy"
+// import { getActiveWAuthProvider, getStrategy } from "../lib/strategy"
 import { connect, createDataItemSigner, message } from "@permaweb/aoconnect"
 import Arweave from "arweave/web"
 
 function App() {
   const address = useActiveAddress()
+  const api = useApi()
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [email, setEmail] = useState<string | null>(null)
   const [connectedWallets, setConnectedWallets] = useState<any[]>([])
@@ -17,34 +18,36 @@ function App() {
   const [processId, setProcessId] = useState<string | null>("0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc")
   const [dataText, setDataText] = useState<string | null>("Hello WAuth!")
   const [aoMsgId, setAoMsgId] = useState<string | null>(null)
+  const [signatureInput, setSignatureInput] = useState<string | null>(null)
+  const [signatureOutput, setSignatureOutput] = useState<string | null>(null)
 
   const { connected, disconnect } = useConnection()
 
-  const githubStrategy = getStrategy(WAuthProviders.Github)
-  githubStrategy.onAuthDataChange((data) => {
-    console.log("[app] auth data changed", data)
-    setAccessToken(data.accessToken)
-    setEmail(data.email)
-  })
-  const googleStrategy = getStrategy(WAuthProviders.Google)
-  googleStrategy.onAuthDataChange((data) => {
-    console.log("[app] auth data changed", data)
-    setAccessToken(data.accessToken)
-    setEmail(data.email)
-  })
-  const discordStrategy = getStrategy(WAuthProviders.Discord)
-  discordStrategy.onAuthDataChange((data) => {
-    console.log("[app] auth data changed", data)
-    setAccessToken(data.accessToken)
-    setEmail(data.email)
-  })
+  // const githubStrategy = getStrategy(WAuthProviders.Github)
+  // githubStrategy.onAuthDataChange((data) => {
+  //   console.log("[app] auth data changed", data)
+  //   setAccessToken(data.accessToken)
+  //   setEmail(data.email)
+  // })
+  // const googleStrategy = getStrategy(WAuthProviders.Google)
+  // googleStrategy.onAuthDataChange((data) => {
+  //   console.log("[app] auth data changed", data)
+  //   setAccessToken(data.accessToken)
+  //   setEmail(data.email)
+  // })
+  // const discordStrategy = getStrategy(WAuthProviders.Discord)
+  // discordStrategy.onAuthDataChange((data) => {
+  //   console.log("[app] auth data changed", data)
+  //   setAccessToken(data.accessToken)
+  //   setEmail(data.email)
+  // })
 
   // Function to fetch connected wallets
   const fetchConnectedWallets = async () => {
     try {
       setIsLoadingWallets(true)
-      const strategy = getStrategy(getActiveWAuthProvider())
-      const wallets = await strategy.getConnectedWallets()
+      // const strategy = getStrategy(getActiveWAuthProvider())
+      const wallets = await api.getConnectedWallets()
       setConnectedWallets(wallets || [])
     } catch (error) {
       console.error("Error fetching connected wallets:", error)
@@ -69,8 +72,8 @@ function App() {
       // Connect to the wallet with required permissions
       await window.arweaveWallet.connect(["ACCESS_ADDRESS", "ACCESS_PUBLIC_KEY", "SIGNATURE"])
 
-      const strategy = getStrategy(getActiveWAuthProvider())
-      const result = await strategy.addConnectedWallet(window.arweaveWallet)
+      // const strategy = getStrategy(getActiveWAuthProvider())
+      const result = await api.addConnectedWallet(window.arweaveWallet)
 
       console.log("Wallet connected:", result)
 
@@ -92,8 +95,8 @@ function App() {
       const confirmRemove = confirm(`Are you sure you want to disconnect wallet ${walletAddress.slice(0, 8)}...${walletAddress.slice(-8)}?`)
       if (!confirmRemove) return
 
-      const strategy = getStrategy(getActiveWAuthProvider())
-      await strategy.removeConnectedWallet(walletId)
+      // const strategy = getStrategy(getActiveWAuthProvider())
+      await api.removeConnectedWallet(walletId)
 
       console.log("Wallet disconnected:", walletId)
 
@@ -124,13 +127,12 @@ function App() {
   async function signTransaction() {
     const ar = Arweave.init({})
 
-    const strategy = getStrategy(getActiveWAuthProvider())
     const dataUint8Array = new TextEncoder().encode(dataToSign)
     const transaction = await ar.createTransaction({
       data: dataUint8Array
     })
     transaction.addTag("Action", "Info")
-    const signedTransaction = await strategy.sign(transaction)
+    const signedTransaction = await api.sign(transaction)
     console.log(signedTransaction)
     setSignedData("signature: " + signedTransaction.signature)
     // submit transaction
@@ -155,8 +157,7 @@ function App() {
 
 
   async function sendAoMessage() {
-    const strategy = getStrategy(getActiveWAuthProvider())
-    const signer = strategy.getAoSigner()
+    const signer = api.getAoSigner()
 
     const ao = connect({ MODE: "legacy" })
     const res = await ao.message({
@@ -167,6 +168,13 @@ function App() {
     })
     console.log(res)
     setAoMsgId(res)
+  }
+
+  async function signData() {
+    const uint8array = new TextEncoder().encode(signatureInput)
+    const signature = await api.signature(uint8array)
+    console.log(signature)
+    setSignatureOutput(Buffer.from(signature).toString("hex"))
   }
 
   return (
@@ -211,7 +219,7 @@ function App() {
               </div>
             </div>
 
-            <div className="card">
+            {connected && <div className="card">
               <h3 className="card-title">🔐 Sign Transaction (WIP, BETA)</h3>
               <div className="info-item">
                 <span className="label">Test sign a transaction with custom data</span>
@@ -241,7 +249,23 @@ function App() {
                   <button className="btn">View on AO Link</button>
                 </a>}
               </div>
-            </div>
+            </div>}
+
+            {
+              connected && <div className="card">
+                <h3 className="card-title">🔐 Sign Data</h3>
+                <div className="info-item">
+                  <span className="label">Data:</span>
+                  <input type="text" className="input" placeholder="Enter data"
+                    onChange={(e) => setSignatureInput(e.target.value)} />
+                </div>
+                <button className="btn" onClick={signData}>Sign Data</button>
+                <div className="info-item">
+                  <span className="label">Signature:</span>
+                  <span className="value" style={{ wordBreak: "break-all", width: "100%", minWidth: "500px" }}>{signatureOutput ? signatureOutput : "Not available"}</span>
+                </div>
+              </div>
+            }
 
             {connected && (
               <div className="card">

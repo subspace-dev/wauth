@@ -54,8 +54,8 @@ export default class WAuthStrategy {
         this.windowArweaveWalletBackup = null;
         if (window.arweaveWallet && window.arweaveWallet.walletName != "WAuth") {
             this.windowArweaveWalletBackup = window.arweaveWallet;
-            window.arweaveWallet = this.getWindowWalletInterface();
-            console.log("injected wauth into window.arweaveWallet");
+            // window.arweaveWallet = this.getWindowWalletInterface() as any
+            // console.log("injected wauth into window.arweaveWallet")
         }
     }
     async connect(permissions) {
@@ -91,11 +91,14 @@ export default class WAuthStrategy {
         if (!pkey) {
             throw new Error("No public key found");
         }
-        // wallet must have SIGNATURE permission
-        const data = new TextEncoder().encode(JSON.stringify({ address, pkey }));
-        const signature = await ArweaveWallet.signMessage(data);
+        // Create message data and encode it
+        const messageData = { address, pkey };
+        const data = new TextEncoder().encode(JSON.stringify(messageData));
+        // Sign the message using SHA-256 hashing (Wander's default)
+        const signature = await ArweaveWallet.signMessage(data, {
+            hashAlgorithm: "SHA-256"
+        });
         const signatureString = Buffer.from(signature).toString("base64");
-        console.log(signatureString);
         const resData = await this.walletRef.addConnectedWallet(address, pkey, signatureString);
         console.log(resData);
         return resData;
@@ -146,10 +149,13 @@ export default class WAuthStrategy {
         throw new Error("Dispatch is not implemented in WAuth yet");
     }
     async signDataItem(dataItem) {
-        return (await this.walletRef.signDataItem(dataItem)).raw;
+        return (await this.walletRef.signDataItem(dataItem));
+    }
+    async signature(data, algorithm) {
+        return (await this.walletRef.signature(data, algorithm));
     }
     async signAns104(dataItem) {
-        return (await this.walletRef.signDataItem(dataItem));
+        return (await this.walletRef.signAns104(dataItem));
     }
     addAddressEvent(listener) {
         this.addressListeners.push(listener);

@@ -72,6 +72,7 @@ export default class WAuthStrategy implements Strategy {
     isAvailable(): Promise<boolean>;
     dispatch(transaction: Transaction): Promise<DispatchResult>;
     signDataItem(dataItem: ArConnectDataItem): Promise<ArrayBuffer>;
+    signature(data: Uint8Array, algorithm: AlgorithmIdentifier | RsaPssParams | EcdsaParams): Promise<Uint8Array>;
     signAns104(dataItem: ArConnectDataItem): Promise<{
         id: string;
         raw: ArrayBuffer;

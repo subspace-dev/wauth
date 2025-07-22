@@ -69,8 +69,8 @@ export default class WAuthStrategy implements Strategy {
         this.windowArweaveWalletBackup = null;
         if (window.arweaveWallet && window.arweaveWallet.walletName != "WAuth") {
             this.windowArweaveWalletBackup = window.arweaveWallet
-            window.arweaveWallet = this.getWindowWalletInterface() as any
-            console.log("injected wauth into window.arweaveWallet")
+            // window.arweaveWallet = this.getWindowWalletInterface() as any
+            // console.log("injected wauth into window.arweaveWallet")
         }
     }
 
@@ -108,11 +108,15 @@ export default class WAuthStrategy implements Strategy {
         if (!address) { throw new Error("No address found") }
         if (!pkey) { throw new Error("No public key found") }
 
-        // wallet must have SIGNATURE permission
-        const data = new TextEncoder().encode(JSON.stringify({ address, pkey }));
-        const signature = await ArweaveWallet.signMessage(data)
+        // Create message data and encode it
+        const messageData = { address, pkey };
+        const data = new TextEncoder().encode(JSON.stringify(messageData));
+
+        // Sign the message using SHA-256 hashing (Wander's default)
+        const signature = await ArweaveWallet.signMessage(data, {
+            hashAlgorithm: "SHA-256"
+        });
         const signatureString = Buffer.from(signature).toString("base64")
-        console.log(signatureString)
 
         const resData = await this.walletRef.addConnectedWallet(address, pkey, signatureString)
         console.log(resData)
@@ -185,11 +189,15 @@ export default class WAuthStrategy implements Strategy {
     }
 
     public async signDataItem(dataItem: ArConnectDataItem): Promise<ArrayBuffer> {
-        return (await this.walletRef.signDataItem(dataItem)).raw
+        return (await this.walletRef.signDataItem(dataItem))
+    }
+
+    public async signature(data: Uint8Array, algorithm: AlgorithmIdentifier | RsaPssParams | EcdsaParams): Promise<Uint8Array> {
+        return (await this.walletRef.signature(data, algorithm))
     }
 
     public async signAns104(dataItem: ArConnectDataItem): Promise<{ id: string, raw: ArrayBuffer }> {
-        return (await this.walletRef.signDataItem(dataItem))
+        return (await this.walletRef.signAns104(dataItem))
     }
 
     public addAddressEvent(listener: (address: string) => void): (e: CustomEvent<{ address: string }>) => void {

@@ -2,6 +2,7 @@ import PocketBase, {} from "pocketbase";
 import Arweave from "arweave";
 import Transaction from "arweave/web/lib/transaction";
 import {} from "arconnect";
+import { DataItem } from "@dha-team/arbundles";
 import axios from "axios";
 export var WAuthProviders;
 (function (WAuthProviders) {
@@ -16,6 +17,7 @@ export var WalletActions;
     WalletActions["DECRYPT"] = "decrypt";
     WalletActions["DISPATCH"] = "dispatch";
     WalletActions["SIGN_DATA_ITEM"] = "signDataItem";
+    WalletActions["SIGNATURE"] = "signature";
 })(WalletActions || (WalletActions = {}));
 export class WAuth {
     static devUrl = "http://localhost:8090";
@@ -273,8 +275,29 @@ export class WAuth {
             console.warn("[wauth] Signature options are not supported yet");
         return await this.runAction(WalletActions.SIGN, { transaction: transaction.toJSON() });
     }
-    async signDataItem(dataItem) {
+    async signature(data, algorithm) {
+        if (algorithm) {
+            console.warn("[wauth] Signature algorithm is not supported and Rsa4096Pss will be used by default");
+        }
+        return Object.values(await this.runAction(WalletActions.SIGNATURE, { data }));
+    }
+    async signAns104(dataItem) {
         return await this.runAction(WalletActions.SIGN_DATA_ITEM, { dataItem });
+    }
+    async signDataItem(dataItem) {
+        return (await this.runAction(WalletActions.SIGN_DATA_ITEM, { dataItem })).raw;
+    }
+    getAoSigner() {
+        if (!this.isLoggedIn())
+            throw new Error("Not logged in");
+        if (!this.wallet)
+            throw new Error("No wallet found");
+        return async (create, createDataItem) => {
+            const { data, tags, target, anchor } = await create({ alg: 'rsa-v1_5-sha256', passthrough: true });
+            const signedDataItem = await this.signAns104({ data, tags, target, anchor });
+            const dataItem = new DataItem(Buffer.from(signedDataItem.raw));
+            return { id: dataItem.id, raw: dataItem.getRaw() };
+        };
     }
     logout() {
         this.authData = null;

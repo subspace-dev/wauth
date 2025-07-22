@@ -2,7 +2,7 @@ import PocketBase, { type RecordAuthResponse, type RecordModel } from "pocketbas
 import type { GatewayConfig, PermissionType } from "arconnect";
 import Transaction from "arweave/web/lib/transaction";
 import type { SignatureOptions } from "arweave/web/lib/crypto/crypto-interface";
-import { type DataItem } from "arconnect";
+import { type DataItem as ArConnectDataItem } from "arconnect";
 export declare enum WAuthProviders {
     Google = "google",
     Github = "github",
@@ -13,7 +13,8 @@ export declare enum WalletActions {
     ENCRYPT = "encrypt",
     DECRYPT = "decrypt",
     DISPATCH = "dispatch",
-    SIGN_DATA_ITEM = "signDataItem"
+    SIGN_DATA_ITEM = "signDataItem",
+    SIGNATURE = "signature"
 }
 export declare class WAuth {
     static devUrl: string;
@@ -58,9 +59,15 @@ export declare class WAuth {
     getAuthRecord(): RecordModel | null;
     pocketbase(): PocketBase;
     sign(transaction: Transaction, options?: SignatureOptions): Promise<any>;
-    signDataItem(dataItem: DataItem): Promise<{
+    signature(data: Uint8Array, algorithm?: AlgorithmIdentifier | RsaPssParams | EcdsaParams): Promise<Uint8Array>;
+    signAns104(dataItem: ArConnectDataItem): Promise<{
         id: string;
         raw: ArrayBuffer;
+    }>;
+    signDataItem(dataItem: ArConnectDataItem): Promise<ArrayBuffer>;
+    getAoSigner(): (create: any, createDataItem: any) => Promise<{
+        id: string;
+        raw: Buffer<ArrayBufferLike>;
     }>;
     logout(): void;
 }
