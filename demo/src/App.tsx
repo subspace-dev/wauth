@@ -171,8 +171,8 @@ function App() {
   }
 
   async function signData() {
-    const uint8array = new TextEncoder().encode(signatureInput)
-    const signature = await api.signature(uint8array)
+    // const uint8array = new TextEncoder().encode(signatureInput)
+    const signature = await api.signature(signatureInput)
     console.log(signature)
     setSignatureOutput(Buffer.from(signature).toString("hex"))
   }
