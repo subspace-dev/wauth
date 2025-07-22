@@ -504,3 +504,75 @@ body {
         font-size: 0.9rem;
     }
 }
+
+.input {
+    width: 90%;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.4);
+    color: #ffffff;
+}
+
+.btn {
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.4);
+    color: #ffffff;
+}
+
+/* --- Sign Transaction Section --- */
+.card .info-item {
+    margin-bottom: 12px;
+    gap: 8px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+}
+
+.card .btn {
+    background: #10b981;
+    margin: 12px 0 20px 0;
+    width: 100%;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+    transition: background 0.2s, box-shadow 0.2s;
+}
+
+.card .btn:hover {
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
+}
+
+.ao-message-section {
+    margin-top: 18px;
+    padding: 16px;
+    background: rgba(59, 130, 246, 0.08);
+    border-radius: 10px;
+    border: 1px solid rgba(59, 130, 246, 0.15);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ao-message-section .input {
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.ao-message-section .ao-btn {
+    color: #fff;
+    font-weight: 600;
+    border: none;
+    margin-top: 8px;
+    width: 100%;
+    transition: background 0.2s, box-shadow 0.2s;
+}
+
+.ao-message-section .ao-btn:hover {
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.18);
+}

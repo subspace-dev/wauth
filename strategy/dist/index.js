@@ -1,6 +1,9 @@
 import { Strategy } from "@arweave-wallet-kit/core/strategy";
 import Transaction from "arweave/web/lib/transaction";
 import { WAuth, WAuthProviders } from "@wauth/sdk";
+import { ArweaveSigner, createData, DataItem } from "@dha-team/arbundles";
+import Arweave from "arweave/web";
+import axios from "axios";
 export default class WAuthStrategy {
     id = "wauth";
     name = "WAuth";
@@ -51,6 +54,11 @@ export default class WAuthStrategy {
         this.authData = this.walletRef.getAuthData();
         this.logo = this.logos[provider];
         this.windowArweaveWalletBackup = null;
+        if (window.arweaveWallet && window.arweaveWallet.walletName != "WAuth") {
+            this.windowArweaveWalletBackup = window.arweaveWallet;
+            window.arweaveWallet = this.getWindowWalletInterface();
+            console.log("injected wauth into window.arweaveWallet");
+        }
     }
     async connect(permissions) {
         if (permissions) {
@@ -60,9 +68,6 @@ export default class WAuthStrategy {
         if (data) {
             this.authData = data?.meta;
             this.authDataListeners.forEach(listener => listener(data?.meta));
-            if (window.arweaveWallet && window.arweaveWallet.walletName != "WAuth") {
-                this.windowArweaveWalletBackup = window.arweaveWallet;
-            }
         }
     }
     async reconnect() {
@@ -119,7 +124,7 @@ export default class WAuthStrategy {
         return await this.walletRef.getConnectedWallets();
     }
     async sign(transaction, options) {
-        throw new Error("Sign is not implemented in WAuth yet");
+        return await this.walletRef.sign(transaction, options);
     }
     async getPermissions() {
         return await this.walletRef.getPermissions();
@@ -142,8 +147,11 @@ export default class WAuthStrategy {
     async dispatch(transaction) {
         throw new Error("Dispatch is not implemented in WAuth yet");
     }
-    async signDataItem(p) {
-        throw new Error("Sign data item is not implemented in WAuth yet");
+    async signDataItem(dataItem) {
+        return (await this.walletRef.signDataItem(dataItem)).raw;
+    }
+    async signAns104(dataItem) {
+        return (await this.walletRef.signDataItem(dataItem));
     }
     addAddressEvent(listener) {
         this.addressListeners.push(listener);
@@ -151,6 +159,18 @@ export default class WAuthStrategy {
     }
     removeAddressEvent(listener) {
         this.addressListeners.splice(this.addressListeners.indexOf(listener), 1);
+    }
+    getAoSigner() {
+        return async (create, createDataItem) => {
+            console.log("create", create);
+            console.log("createDataItem", createDataItem);
+            const { data, tags, target, anchor } = await create({ alg: 'rsa-v1_5-sha256', passthrough: true });
+            const signedDataItem = await this.signAns104({ data, tags, target, anchor });
+            const dataItem = new DataItem(Buffer.from(signedDataItem.raw));
+            const valid = await dataItem.isValid();
+            console.log("valid", valid);
+            return { id: dataItem.id, raw: dataItem.getRaw() };
+        };
     }
 }
 function shouldDisconnect(address, connected) {

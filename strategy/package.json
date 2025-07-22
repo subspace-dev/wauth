@@ -41,7 +41,10 @@
   "license": "MIT",
   "dependencies": {
     "@arweave-wallet-kit/core": "^0.1.1",
-    "@wauth/sdk": "^0.0.5"
+    "@dha-team/arbundles": "^1.0.3",
+    "@wauth/sdk": "file:../sdk",
+    "axios": "^1.10.0",
+    "vite-plugin-node-polyfills": "^0.21.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.7",

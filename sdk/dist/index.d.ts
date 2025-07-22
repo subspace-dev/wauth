@@ -1,9 +1,19 @@
 import PocketBase, { type RecordAuthResponse, type RecordModel } from "pocketbase";
 import type { GatewayConfig, PermissionType } from "arconnect";
+import type Transaction from "arweave/node/lib/transaction";
+import type { SignatureOptions } from "arweave/node/lib/crypto/crypto-interface";
+import { type DataItem } from "arconnect";
 export declare enum WAuthProviders {
     Google = "google",
     Github = "github",
     Discord = "discord"
+}
+export declare enum WalletActions {
+    SIGN = "sign",
+    ENCRYPT = "encrypt",
+    DECRYPT = "decrypt",
+    DISPATCH = "dispatch",
+    SIGN_DATA_ITEM = "signDataItem"
 }
 export declare class WAuth {
     static devUrl: string;
@@ -23,6 +33,7 @@ export declare class WAuth {
         backendUrl?: string;
     });
     onAuthDataChange(callback: (data: any) => void): void;
+    private runAction;
     connect({ provider, scopes }: {
         provider: WAuthProviders;
         scopes?: string[];
@@ -46,6 +57,11 @@ export declare class WAuth {
     }>;
     getAuthRecord(): RecordModel | null;
     pocketbase(): PocketBase;
+    sign(transaction: Transaction, options?: SignatureOptions): Promise<any>;
+    signDataItem(dataItem: DataItem): Promise<{
+        id: string;
+        raw: ArrayBuffer;
+    }>;
     logout(): void;
 }
 //# sourceMappingURL=index.d.ts.map

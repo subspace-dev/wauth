@@ -12,9 +12,12 @@
   "dependencies": {
     "@arweave-wallet-kit/core": "^0.1.1",
     "@arweave-wallet-kit/react": "^0.3.2",
-    "@wauth/strategy": "^0.0.5",
+    "@dha-team/arbundles": "^1.0.3",
+    "@permaweb/aoconnect": "^0.0.85",
+    "@wauth/strategy": "../strategy",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "vite-plugin-node-polyfills": "0.21.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.29.0",

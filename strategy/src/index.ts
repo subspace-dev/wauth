@@ -1,15 +1,18 @@
 import { Strategy } from "@arweave-wallet-kit/core/strategy";
 import type {
     AppInfo,
-    DataItem,
     DispatchResult,
     GatewayConfig,
-    PermissionType
+    PermissionType,
+    DataItem as ArConnectDataItem
 } from "arconnect";
 import Transaction from "arweave/web/lib/transaction";
 import type { SignatureOptions } from "arweave/web/lib/crypto/crypto-interface";
 import { WAuth, WAuthProviders } from "@wauth/sdk";
 import type { ArweaveWalletApi } from "@arweave-wallet-kit/core/wallet";
+import { ArweaveSigner, createData, DataItem } from "@dha-team/arbundles";
+import Arweave from "arweave/web";
+import axios from "axios";
 
 export default class WAuthStrategy implements Strategy {
     public id: string = "wauth";
@@ -67,6 +70,11 @@ export default class WAuthStrategy implements Strategy {
         this.authData = this.walletRef.getAuthData();
         this.logo = this.logos[provider]
         this.windowArweaveWalletBackup = null;
+        if (window.arweaveWallet && window.arweaveWallet.walletName != "WAuth") {
+            this.windowArweaveWalletBackup = window.arweaveWallet
+            window.arweaveWallet = this.getWindowWalletInterface() as any
+            console.log("injected wauth into window.arweaveWallet")
+        }
     }
 
     public async connect(permissions?: PermissionType[]): Promise<void> {
@@ -77,9 +85,6 @@ export default class WAuthStrategy implements Strategy {
         if (data) {
             this.authData = data?.meta
             this.authDataListeners.forEach(listener => listener(data?.meta));
-            if (window.arweaveWallet && window.arweaveWallet.walletName != "WAuth") {
-                this.windowArweaveWalletBackup = window.arweaveWallet
-            }
         }
     }
 
@@ -145,7 +150,7 @@ export default class WAuthStrategy implements Strategy {
     }
 
     public async sign(transaction: Transaction, options?: SignatureOptions): Promise<Transaction> {
-        throw new Error("Sign is not implemented in WAuth yet")
+        return await this.walletRef.sign(transaction, options)
     }
 
     public async getPermissions(): Promise<PermissionType[]> {
@@ -182,8 +187,12 @@ export default class WAuthStrategy implements Strategy {
         throw new Error("Dispatch is not implemented in WAuth yet")
     }
 
-    public async signDataItem(p: DataItem): Promise<ArrayBuffer> {
-        throw new Error("Sign data item is not implemented in WAuth yet")
+    public async signDataItem(dataItem: ArConnectDataItem): Promise<ArrayBuffer> {
+        return (await this.walletRef.signDataItem(dataItem)).raw
+    }
+
+    public async signAns104(dataItem: ArConnectDataItem): Promise<{ id: string, raw: ArrayBuffer }> {
+        return (await this.walletRef.signDataItem(dataItem))
     }
 
     public addAddressEvent(listener: (address: string) => void): (e: CustomEvent<{ address: string }>) => void {
@@ -193,6 +202,21 @@ export default class WAuthStrategy implements Strategy {
 
     public removeAddressEvent(listener: (e: CustomEvent<{ address: string }>) => void): void {
         this.addressListeners.splice(this.addressListeners.indexOf(listener as any), 1);
+    }
+
+    public getAoSigner() {
+        return async (create: any, createDataItem: any) => {
+            console.log("create", create)
+            console.log("createDataItem", createDataItem)
+            const { data, tags, target, anchor } = await create({ alg: 'rsa-v1_5-sha256', passthrough: true });
+            const signedDataItem = await this.signAns104({ data, tags, target, anchor })
+
+            const dataItem = new DataItem(Buffer.from(signedDataItem.raw))
+            const valid = await dataItem.isValid()
+            console.log("valid", valid)
+
+            return { id: dataItem.id, raw: dataItem.getRaw() }
+        }
     }
 }
 

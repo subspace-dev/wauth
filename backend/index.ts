@@ -1,9 +1,15 @@
 import { Hono } from 'hono'
-import Arweave from 'arweave'
+import Arweave from 'arweave/node'
 import Pocketbase from 'pocketbase'
 import dotenv from 'dotenv'
 import { cors } from 'hono/cors'
 import crypto from "node:crypto"
+import Transaction from 'arweave/node/lib/transaction'
+import { createData, DataItem, type DataItemCreateOptions } from "@dha-team/arbundles"
+import { ArweaveSigner } from '@dha-team/arbundles'
+import { connect, createDataItemSigner } from "@permaweb/aoconnect"
+import fs from "fs"
+import { createAoSigner } from "@ar.io/sdk"
 
 dotenv.config()
 const ar = Arweave.init({})
@@ -32,10 +38,6 @@ app.get('/jwk', async (c) => {
     const jwk = await ar.wallets.generate()
     const address = await ar.wallets.jwkToAddress(jwk)
     return c.json({ jwk, address })
-})
-
-app.post('/sign', async (c) => {
-    // TODO
 })
 
 // 1. validate the publicKeyString is the public key of the address
@@ -175,6 +177,110 @@ app.get("/check-bot/:guildId", async (c) => {
     })
 
     return c.json({ exists: res.status === 200 }, 200)
+})
+
+export enum WalletActions {
+    SIGN = "sign",
+    ENCRYPT = "encrypt",
+    DECRYPT = "decrypt",
+    DISPATCH = "dispatch",
+    SIGN_DATA_ITEM = "signDataItem"
+}
+
+app.post('/wallet-action', async (c) => {
+    const { action, payload } = await c.req.json()
+    const token = c.req.header("Authorization")
+    const bearerToken = (token?.split(" ")[1])?.trim()
+
+    if (!bearerToken) {
+        return c.json({ error: "No bearer token" }, 400)
+    }
+
+    // validate the token and find out which user it belongs to
+    const userClient = new Pocketbase(pbUrl)
+    userClient.authStore.save(bearerToken!, null)
+    const user = await userClient.collection("users").authRefresh()
+    const userId = user.record.id
+
+    // then get the users wallet jwk through the superuser client
+    const walletRow = await pb.collection("wallets").getFirstListItem(`user = "${userId}"`)
+    if (!walletRow) {
+        return c.json({ error: "No wallet found" }, 400)
+    }
+
+    const jwk = walletRow.jwk
+    if (!jwk) {
+        return c.json({ error: "No JWK found" }, 400)
+    }
+
+    switch (action) {
+        case WalletActions.SIGN:
+            const txPayload = payload.transaction
+            const tx = ar.transactions.fromRaw(txPayload)
+            console.log("tx", tx)
+            await ar.transactions.sign(tx, jwk)
+            console.log("signedTx", tx)
+            return c.json({ ...tx.toJSON() }, 200)
+            // await ar.transactions.sign(transaction, jwk)
+            // return c.json({ ...transaction }, 200)
+            break;
+        case WalletActions.ENCRYPT:
+            break;
+        case WalletActions.DECRYPT:
+            break;
+        case WalletActions.DISPATCH:
+            break;
+        case WalletActions.SIGN_DATA_ITEM:
+            const dataItem = payload.dataItem
+            // console.log("dataItem", dataItem)
+
+            const signer = new ArweaveSigner(jwk)
+            const createdDataItem = createData(dataItem.data, signer, { tags: dataItem.tags, anchor: dataItem.anchor, target: dataItem.target })
+            await createdDataItem.sign(signer)
+
+            // console.log(createdDataItem.byteLength)
+
+            const isValid = await createdDataItem.isValid()
+            // console.log("isValid", isValid)
+
+            if (!isValid) {
+                return c.json({ error: "Invalid data item" }, 400)
+            }
+
+            function decimalAsciiToString(decimals: number[]) {
+                return decimals.map(d => String.fromCharCode(d)).join('')
+            }
+
+            const id = createdDataItem.id
+            const raw = createdDataItem.getRaw()
+            const rawIntArray = Array.from(raw)
+            const data = decimalAsciiToString(rawIntArray)
+
+            // console.log("data", data)
+
+            const newdataitem = new DataItem(raw)
+            const valid = await newdataitem.isValid()
+            if (!valid) {
+                return c.json({ error: "Invalid data item" }, 400)
+            }
+
+
+            return c.json({ id: newdataitem.id, raw: newdataitem.getRaw() }, 200)
+            break;
+        default:
+            return c.json({ error: "Invalid action" }, 400)
+    }
+
+    return c.json({ success: true }, 200)
+})
+
+
+app.post('/raw-data-item', async (c) => {
+    const raw = await c.req.arrayBuffer()
+    console.log("raw", raw)
+    const dataItem = new DataItem(Buffer.from(raw))
+    const isValid = await dataItem.isValid()
+    return c.json({ isValid }, 200)
 })
 
 console.log("Backend started")

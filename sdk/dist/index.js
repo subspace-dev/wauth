@@ -1,11 +1,21 @@
 import PocketBase, {} from "pocketbase";
 import Arweave from "arweave";
+import {} from "arconnect";
+import axios from "axios";
 export var WAuthProviders;
 (function (WAuthProviders) {
     WAuthProviders["Google"] = "google";
     WAuthProviders["Github"] = "github";
     WAuthProviders["Discord"] = "discord";
 })(WAuthProviders || (WAuthProviders = {}));
+export var WalletActions;
+(function (WalletActions) {
+    WalletActions["SIGN"] = "sign";
+    WalletActions["ENCRYPT"] = "encrypt";
+    WalletActions["DECRYPT"] = "decrypt";
+    WalletActions["DISPATCH"] = "dispatch";
+    WalletActions["SIGN_DATA_ITEM"] = "signDataItem";
+})(WalletActions || (WalletActions = {}));
 export class WAuth {
     static devUrl = "http://localhost:8090";
     static devBackendUrl = "http://localhost:8091";
@@ -43,6 +53,69 @@ export class WAuth {
         if (this.authData) {
             callback(this.authData);
         }
+    }
+    async runAction(action, payload = {}) {
+        // make sure the user is logged in
+        if (!this.isLoggedIn())
+            throw new Error("[wauth] Not logged in");
+        // make sure the wallet is connected
+        if (!this.wallet)
+            this.wallet = await this.getWallet();
+        if (!this.wallet)
+            throw new Error("[wauth] No wallet found");
+        console.log(payload);
+        switch (action) {
+            case WalletActions.SIGN:
+                // check for Action=Transfer Tag and ask user for approval
+                if (payload && payload.transaction && payload.transaction.tags) {
+                    const actionTag = payload.transaction.tags.find((tag) => tag.name === "Action");
+                    if (actionTag?.value === "Transfer") {
+                        // ask user for approval before proceeding
+                        // window confirm dialog
+                        const confirmed = window.confirm(`Are you sure you want to proceed with this transaction?\n\n${JSON.stringify(payload)}`);
+                        if (!confirmed) {
+                            throw new Error("[wauth] Transaction cancelled by user");
+                        }
+                    }
+                }
+                break;
+            case WalletActions.SIGN_DATA_ITEM:
+                // check for Action=Transfer Tag and ask user for approval
+                if (payload && payload.dataItem && payload.dataItem.tags) {
+                    const actionTag = payload.dataItem.tags.find((tag) => tag.name === "Action");
+                    if (actionTag?.value === "Transfer") {
+                        // ask user for approval before proceeding
+                        // window confirm dialog
+                        const confirmed = window.confirm(`Are you sure you want to proceed with this transaction?\n\n${JSON.stringify(payload)}`);
+                        if (!confirmed) {
+                            throw new Error("[wauth] Transaction cancelled by user");
+                        }
+                    }
+                }
+                break;
+        }
+        // send the action and payload to the backend
+        // const res = await fetch(`${this.backendUrl}/wallet-action`, {
+        //     method: "POST",
+        //     headers: {
+        //         "Content-Type": "application/json",
+        //         "Authorization": `Bearer ${this.getAuthToken()}`
+        //     },
+        //     body: JSON.stringify({ action, payload })
+        // })
+        // console.log("res headers", res.headers.entries())
+        const res = await axios.post(`${this.backendUrl}/wallet-action`, { action, payload }, {
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": `Bearer ${this.getAuthToken()}`
+            },
+            responseType: 'json' // This tells axios to return raw binary data
+        });
+        // console.log("res headers", res.headers)
+        // const data = res.data  // This will now be an ArrayBuffer
+        // console.log("data", data)
+        return res.data;
     }
     async connect({ provider, scopes }) {
         if (!Object.values(WAuthProviders).includes(provider))
@@ -119,6 +192,7 @@ export class WAuth {
         return { [await this.getActiveAddress()]: "WAuth" };
     }
     async getArweaveConfig() {
+        // TODO: make this configurable
         const config = {
             host: "arweave.net",
             port: 443,
@@ -196,6 +270,14 @@ export class WAuth {
     }
     pocketbase() {
         return this.pb;
+    }
+    async sign(transaction, options) {
+        if (options)
+            console.warn("[wauth] Signature options are not supported yet");
+        return await this.runAction(WalletActions.SIGN, { transaction: transaction.toJSON() });
+    }
+    async signDataItem(dataItem) {
+        return await this.runAction(WalletActions.SIGN_DATA_ITEM, { dataItem });
     }
     logout() {
         this.authData = null;

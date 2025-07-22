@@ -1,5 +1,5 @@
 import { Strategy } from "@arweave-wallet-kit/core/strategy";
-import type { DataItem, DispatchResult, GatewayConfig, PermissionType } from "arconnect";
+import type { DispatchResult, GatewayConfig, PermissionType, DataItem as ArConnectDataItem } from "arconnect";
 import Transaction from "arweave/web/lib/transaction";
 import type { SignatureOptions } from "arweave/web/lib/crypto/crypto-interface";
 import { WAuthProviders } from "@wauth/sdk";
@@ -32,7 +32,7 @@ export default class WAuthStrategy implements Strategy {
         getArweaveConfig: () => Promise<GatewayConfig>;
         isAvailable: () => Promise<boolean>;
         dispatch: (transaction: Transaction) => Promise<DispatchResult>;
-        signDataItem: (p: DataItem) => Promise<ArrayBuffer>;
+        signDataItem: (dataItem: ArConnectDataItem) => Promise<ArrayBuffer>;
         addAddressEvent: (listener: (address: string) => void) => (e: CustomEvent<{
             address: string;
         }>) => void;
@@ -71,13 +71,21 @@ export default class WAuthStrategy implements Strategy {
     getArweaveConfig(): Promise<GatewayConfig>;
     isAvailable(): Promise<boolean>;
     dispatch(transaction: Transaction): Promise<DispatchResult>;
-    signDataItem(p: DataItem): Promise<ArrayBuffer>;
+    signDataItem(dataItem: ArConnectDataItem): Promise<ArrayBuffer>;
+    signAns104(dataItem: ArConnectDataItem): Promise<{
+        id: string;
+        raw: ArrayBuffer;
+    }>;
     addAddressEvent(listener: (address: string) => void): (e: CustomEvent<{
         address: string;
     }>) => void;
     removeAddressEvent(listener: (e: CustomEvent<{
         address: string;
     }>) => void): void;
+    getAoSigner(): (create: any, createDataItem: any) => Promise<{
+        id: string;
+        raw: Buffer<ArrayBufferLike>;
+    }>;
 }
 declare function fixConnection(address: string | undefined, connected: boolean, disconnect: () => void): void;
 export { WAuthProviders, fixConnection };
