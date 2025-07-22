@@ -1,12 +1,12 @@
 {
   "name": "@wauth/strategy",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "WAuth strategy for Arweave Wallet Kit",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ankushKun/wauth/tree/main/strategy"
+    "url": "git+https://github.com/subspace-dev/wauth.git#main"
   },
-  "homepage": "https://github.com/ankushKun/wauth.git",
+  "homepage": "https://github.com/subspace-dev/wauth/tree/main/strategy",
   "type": "module",
   "publishConfig": {
     "access": "public"

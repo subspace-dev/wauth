@@ -1,12 +1,12 @@
 {
   "name": "@wauth/sdk",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Web2 auth sdk for Arweave",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ankushKun/wauth/tree/main/sdk"
+    "url": "git+https://github.com/subspace-dev/wauth.git#main"
   },
-  "homepage": "https://github.com/ankushKun/wauth.git",
+  "homepage": "https://github.com/subspace-dev/wauth/tree/main/sdk",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
