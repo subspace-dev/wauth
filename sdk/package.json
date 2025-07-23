@@ -1,6 +1,6 @@
 {
   "name": "@wauth/sdk",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "Web2 auth sdk for Arweave",
   "repository": {
     "type": "git",
@@ -21,7 +21,9 @@
     "dist"
   ],
   "scripts": {
-    "build": "npm run clean && tsc",
+    "generate-version": "node generate-version.js",
+    "prebuild": "npm run generate-version",
+    "build": "npm run clean && npm run generate-version && tsc",
     "clean": "rm -rf dist",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",

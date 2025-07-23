@@ -5,6 +5,7 @@ import {} from "arconnect";
 import { DataItem } from "@dha-team/arbundles";
 import axios from "axios";
 import base64url from "base64url";
+import { WAUTH_VERSION } from "./version";
 export var WAuthProviders;
 (function (WAuthProviders) {
     WAuthProviders["Google"] = "google";
@@ -147,9 +148,10 @@ export class WAuth {
     wallet;
     authRecord;
     backendUrl;
-    version = `0.0.5`;
+    static version = WAUTH_VERSION;
+    version = WAuth.version;
     authDataListeners = [];
-    constructor({ dev, url, backendUrl }) {
+    constructor({ dev = false, url, backendUrl }) {
         if (dev == undefined) {
             dev = process.env.NODE_ENV === "development";
         }

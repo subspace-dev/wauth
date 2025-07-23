@@ -38,6 +38,7 @@ export declare class WAuth {
     private wallet;
     private authRecord;
     private backendUrl;
+    static version: string;
     version: string;
     private authDataListeners;
     constructor({ dev, url, backendUrl }: {

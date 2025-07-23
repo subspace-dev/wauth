@@ -8,6 +8,7 @@ import { type DataItem as ArConnectDataItem } from "arconnect";
 import { DataItem } from "@dha-team/arbundles";
 import axios from "axios";
 import base64url from "base64url";
+import { WAUTH_VERSION } from "./version";
 
 
 export enum WAuthProviders {
@@ -177,12 +178,13 @@ export class WAuth {
     private wallet: RecordModel | null;
     private authRecord: RecordModel | null;
     private backendUrl: string;
-    public version: string = `0.0.5`;
+    public static version: string = WAUTH_VERSION;
+    public version: string = WAuth.version;
 
     private authDataListeners: ((data: any) => void)[] = [];
 
 
-    constructor({ dev, url, backendUrl }: { dev?: boolean, url?: string, backendUrl?: string }) {
+    constructor({ dev = false, url, backendUrl }: { dev?: boolean, url?: string, backendUrl?: string }) {
         if (dev == undefined) {
             dev = process.env.NODE_ENV === "development"
         }
