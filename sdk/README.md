@@ -10,15 +10,6 @@ Install the SDK in your project:
 npm i @wauth/sdk@latest
 ```
 
-## Features
-
-- 🔐 Social Authentication (Google, GitHub, Discord)
-- 🔑 Arweave Wallet Compatibility
-- 📝 Transaction Signing
-- 🔄 Multiple Wallet Management
-- 🌐 AO Protocol Integration
-- 🔏 Data Signing
-
 ## Setup & Usage
 
 ### Basic Setup

@@ -17,6 +17,17 @@ export declare enum WalletActions {
     SIGN_DATA_ITEM = "signDataItem",
     SIGNATURE = "signature"
 }
+export declare class WauthSigner {
+    private wauth;
+    publicKey: Buffer;
+    ownerLength: number;
+    signatureLength: number;
+    signatureType: number;
+    constructor(wauth: WAuth);
+    setPublicKey(): Promise<void>;
+    sign(message: Uint8Array): Promise<Uint8Array>;
+    static verify(pk: string | Buffer, message: Uint8Array, signature: Uint8Array): Promise<boolean>;
+}
 export declare class WAuth {
     static devUrl: string;
     static devBackendUrl: string;
@@ -66,6 +77,7 @@ export declare class WAuth {
         raw: ArrayBuffer;
     }>;
     signDataItem(dataItem: ArConnectDataItem): Promise<ArrayBuffer>;
+    getWauthSigner(): WauthSigner;
     getAoSigner(): (create: any, createDataItem: any) => Promise<{
         id: string;
         raw: Buffer<ArrayBufferLike>;

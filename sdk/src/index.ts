@@ -7,6 +7,7 @@ import type { SignatureOptions } from "arweave/web/lib/crypto/crypto-interface";
 import { type DataItem as ArConnectDataItem } from "arconnect";
 import { DataItem } from "@dha-team/arbundles";
 import axios from "axios";
+import base64url from "base64url";
 
 
 export enum WAuthProviders {
@@ -24,6 +25,146 @@ export enum WalletActions {
     SIGN_DATA_ITEM = "signDataItem",
     SIGNATURE = "signature"
 }
+
+export class WauthSigner {
+    private wauth: WAuth;
+    public publicKey: Buffer;
+    public ownerLength = 512;
+    public signatureLength = 512;
+    public signatureType = 1;
+
+    constructor(wauth: WAuth) {
+        console.log("[WauthSigner] Initializing with wauth instance", { hasWauth: !!wauth });
+        this.wauth = wauth;
+        // Initialize publicKey as empty buffer, will be set in setPublicKey
+        this.publicKey = Buffer.alloc(0);
+        // Immediately set the public key
+        this.setPublicKey().catch(error => {
+            console.error("[WauthSigner] Failed to set initial public key:", error);
+            throw error;
+        });
+    }
+
+    async setPublicKey() {
+        try {
+            console.log("[WauthSigner] Setting public key...");
+            const arOwner = await this.wauth.getActivePublicKey();
+            console.log("[WauthSigner] Got active public key:", arOwner);
+            this.publicKey = base64url.toBuffer(arOwner);
+            if (this.publicKey.length !== this.ownerLength) {
+                throw new Error(`Public key length mismatch. Expected ${this.ownerLength} bytes but got ${this.publicKey.length} bytes`);
+            }
+            console.log("[WauthSigner] Public key set successfully:", {
+                publicKeyLength: this.publicKey.length,
+                publicKeyType: typeof this.publicKey
+            });
+        } catch (error) {
+            console.error("[WauthSigner] Failed to set public key:", error);
+            throw error;
+        }
+    }
+
+    async sign(message: Uint8Array): Promise<Uint8Array> {
+        try {
+            console.log("[WauthSigner] Starting sign operation", {
+                messageLength: message.length,
+                hasPublicKey: this.publicKey.length > 0,
+                publicKeyLength: this.publicKey.length
+            });
+
+            if (!this.publicKey.length || this.publicKey.length !== this.ownerLength) {
+                console.log("[WauthSigner] Public key not set or invalid length, fetching...");
+                await this.setPublicKey();
+            }
+
+            console.log("[WauthSigner] Calling wauth.signature...");
+            const signature = await this.wauth.signature(message);
+            console.log("[WauthSigner] Got raw signature:", {
+                signatureType: typeof signature,
+                signatureKeys: Object.keys(signature)
+            });
+
+            const buf = new Uint8Array(Object.values(signature).map((v) => +v));
+            console.log("[WauthSigner] Converted signature to Uint8Array:", {
+                bufferLength: buf.length,
+                expectedLength: this.signatureLength
+            });
+
+            if (buf.length !== this.signatureLength) {
+                throw new Error(`Signature length mismatch. Expected ${this.signatureLength} bytes but got ${buf.length} bytes`);
+            }
+
+            return buf;
+        } catch (error) {
+            console.error("[WauthSigner] Sign operation failed:", error);
+            throw error;
+        }
+    }
+
+    static async verify(pk: string | Buffer, message: Uint8Array, signature: Uint8Array): Promise<boolean> {
+        try {
+            console.log("[WauthSigner] Starting verify operation", {
+                pkType: typeof pk,
+                isBuffer: Buffer.isBuffer(pk),
+                messageLength: message.length,
+                signatureLength: signature.length
+            });
+
+            // Convert Buffer to string if needed
+            const publicKeyString = Buffer.isBuffer(pk) ? pk.toString() : pk;
+            console.log("[WauthSigner] Converted public key to string:", {
+                publicKeyLength: publicKeyString.length
+            });
+
+            // Import the public key for verification
+            const publicJWK: JsonWebKey = {
+                e: "AQAB",
+                ext: true,
+                kty: "RSA",
+                n: publicKeyString
+            };
+            console.log("[WauthSigner] Created JWK:", {
+                hasE: !!publicJWK.e,
+                hasN: !!publicJWK.n,
+                kty: publicJWK.kty
+            });
+
+            console.log("[WauthSigner] Importing public key...");
+            // Import public key for verification
+            const verificationKey = await crypto.subtle.importKey(
+                "jwk",
+                publicJWK,
+                {
+                    name: "RSA-PSS",
+                    hash: "SHA-256"
+                },
+                false,
+                ["verify"]
+            );
+            console.log("[WauthSigner] Public key imported successfully");
+
+            // Verify the signature
+            console.log("[WauthSigner] Verifying signature...");
+            const result = await crypto.subtle.verify(
+                { name: "RSA-PSS", saltLength: 32 },
+                verificationKey,
+                signature,
+                message
+            );
+            console.log("[WauthSigner] Verification result:", result);
+
+            return result;
+        } catch (error: any) {
+            console.error("[WauthSigner] Verify operation failed:", {
+                error,
+                errorMessage: error?.message || "Unknown error",
+                errorStack: error?.stack || "No stack trace available"
+            });
+            return false;
+        }
+    }
+}
+
 
 export class WAuth {
     static devUrl = "http://localhost:8090"
@@ -50,6 +191,7 @@ export class WAuth {
         this.authData = null;
         this.wallet = null;
         this.authRecord = null;
+
 
         this.pb.authStore.onChange(async (token, record) => {
             if (!record || !localStorage.getItem("pocketbase_auth")) {
@@ -316,6 +458,10 @@ export class WAuth {
 
     public async signDataItem(dataItem: ArConnectDataItem): Promise<ArrayBuffer> {
         return (await this.runAction(WalletActions.SIGN_DATA_ITEM, { dataItem })).raw
+    }
+
+    public getWauthSigner(): WauthSigner {
+        return new WauthSigner(this)
     }
 
     public getAoSigner() {

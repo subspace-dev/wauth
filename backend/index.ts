@@ -26,10 +26,15 @@ await new Promise(resolve => setTimeout(resolve, 2000))
 
 const pbUrl = 'http://localhost:8090'
 const pb = new Pocketbase(pbUrl)
-pb.autoCancellation(false)
+pb.autoCancellation(true)
 
 // adming auth pocketbase
-await pb.collection("_superusers").authWithPassword(process.env.SU_EMAIL!, process.env.SU_PASS!)
+await pb.collection("_superusers").authWithPassword(process.env.SU_EMAIL!, process.env.SU_PASS!, {
+    noNotify: true,
+    // This will trigger auto refresh or auto reauthentication in case
+    // the token has expired or is going to expire in the next 30 minutes.
+    autoRefreshThreshold: 30 * 60
+})
 
 
 app.get('/', (c) => c.json({ message: "OK!" }))
