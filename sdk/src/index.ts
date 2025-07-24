@@ -459,9 +459,6 @@ export class WAuth {
     }
 
     constructor({ dev = false, url, backendUrl }: { dev?: boolean, url?: string, backendUrl?: string }) {
-        if (dev == undefined) {
-            dev = process.env.NODE_ENV === "development"
-        }
         this.pb = new PocketBase(url || (dev ? WAuth.devUrl : WAuth.prodUrl));
         this.backendUrl = backendUrl || (dev ? WAuth.devBackendUrl : WAuth.prodBackendUrl);
         this.authData = null;
