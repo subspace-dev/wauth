@@ -51,6 +51,7 @@
   },
   "dependencies": {
     "@dha-team/arbundles": "^1.0.3",
+    "@permaweb/aoconnect": "^0.0.85",
     "arconnect": "^1.0.4",
     "arweave": "^2.0.0-ec.1",
     "axios": "^1.10.0",

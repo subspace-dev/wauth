@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transfer Modal Example</title>
+    <style>
+        body {
+            height: 100vh;
+            margin: 0;
+            background: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #modal-container {
+            font-family: 'Inter', sans-serif;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            backdrop-filter: blur(3px);
+            color: #fff;
+        }
+
+        .wauth-powered {
+            position: absolute;
+            /* left: 0;
+            right: 0; */
+            bottom: 15px;
+            text-align: center;
+            font-size: 0.95rem;
+            color: #b3b3b3;
+            opacity: 0.7;
+            letter-spacing: 0.02em;
+        }
+
+        .wauth-powered a {
+            color: inherit;
+            text-decoration: inherit;
+        }
+
+        #modal-content {
+            background: #222;
+            padding: 32px 28px 24px 28px;
+            width: 370px;
+            border-radius: 18px;
+            border: 1px solid #333;
+            box-shadow: 0 0 100px 0 rgba(0, 0, 0, 0.5);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .modal-title {
+            font-size: 2rem;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+        }
+
+        .modal-appicon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: #444;
+        }
+
+        .modal-desc {
+            font-size: 1rem;
+            color: #cfcfd1;
+            margin-bottom: 10px;
+        }
+
+        .modal-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 10px 0 18px 0;
+        }
+
+        .token-logo {
+            width: 64px;
+            height: 64px;
+            border-radius: 20%;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+            border: 3px solid #6c63ff;
+        }
+
+        .token-logo-text {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #6c63ff;
+        }
+
+        .token-amount {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 2px;
+        }
+
+        .token-unit {
+            font-size: 1.2rem;
+            color: #cfcfd1;
+            margin-left: 4px;
+        }
+
+        .modal-details {
+            margin: 0 0 10px 0;
+        }
+
+        .modal-details-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 1rem;
+        }
+
+        .modal-details-label {
+            color: #b3b3b3;
+        }
+
+        .modal-details-value {
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .modal-tags {
+            color: #a3a3a3;
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+        }
+
+        .modal-status {
+            background: #18181b;
+            border-radius: 8px;
+            padding: 8px 0;
+            text-align: center;
+            color: #b3b3b3;
+            font-size: 0.98rem;
+            margin-bottom: 10px;
+        }
+
+        .modal-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .modal-btn {
+            width: 100%;
+            padding: 14px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .modal-btn-primary {
+            background: linear-gradient(90deg, #6c63ff 0%, #7f6fff 100%);
+            color: #fff;
+        }
+
+        .modal-btn-primary:hover {
+            background: linear-gradient(90deg, #7f6fff 0%, #6c63ff 100%);
+        }
+
+        .modal-btn-secondary {
+            background: #18181b;
+            color: #fff;
+            border: 1px solid #333;
+        }
+
+        .modal-btn-secondary:hover {
+            background: #232326;
+        }
+
+        .modal-tags {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 8px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .modal-tags-title {
+            color: #b3b3b3;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+
+        .modal-tag-label {
+            color: #b3b3b3;
+            font-size: 0.95rem;
+        }
+
+        .modal-tag-value {
+            color: #fff;
+        }
+
+        .modal-tag {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+            font-size: 1rem;
+        }
+    </style>
+    <script>
+        function proceed() {
+            console.log("proceed")
+        }
+
+        function cancel() {
+            console.log("cancel")
+        }
+    </script>
+</head>
+
+<body>
+    <div id="modal-container">
+        <div id="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Transfer</div>
+                <!-- this will be the website icon -->
+                <img class="modal-appicon" src="https://placehold.co/32x32" alt="App Icon" />
+            </div>
+            <div class="modal-desc">
+                'window hostname' wants to sign a transaction. Review the details below.
+            </div>
+            <div class="modal-center">
+                <!-- <div class="ao-logo">
+                    <span class="ao-logo-text">AO</span>
+                </div> -->
+                <img class="token-logo" src="https://placehold.co/64x64" alt="App Icon" />
+                <div class="token-amount">0 <span class="token-unit">AO</span></div>
+            </div>
+            <div class="modal-details">
+                <div class="modal-details-row">
+                    <span class="modal-details-label">Process ID</span>
+                    <span class="modal-details-value">0syT13...ILSrsc</span>
+                </div>
+                <div class="modal-details-row">
+                    <span class="modal-details-label">From</span>
+                    <span class="modal-details-value">8iD-Gy...b63YHg</span>
+                </div>
+                <!-- TAG LIST (scrollable, max height 100px) -->
+                <div class="modal-tags">
+                    <div class="modal-tags-title">Tags</div>
+                    <div class="modal-tag">
+                        <span class="modal-tag-label">Action</span>
+                        <span class="modal-tag-value">Transfer</span>
+                    </div>
+                    <div class="modal-tag">
+                        <span class="modal-tag-label">Recipient</span>
+                        <span class="modal-tag-value">8iD-Gy...b63YHg</span>
+                    </div>
+                    <div class="modal-tag">
+                        <span class="modal-tag-label">Quantity</span>
+                        <span class="modal-tag-value">100</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-primary" onclick="proceed()">Sign</button>
+                <button class="modal-btn modal-btn-secondary" onclick="cancel()">Cancel</button>
+            </div>
+        </div>
+        <div class="wauth-powered"><a href="https://wauth_subspace.ar.io" target="_blank">powered by wauth</a></div>
+    </div>
+</body>
+
+</html>

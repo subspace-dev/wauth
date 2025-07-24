@@ -17,6 +17,7 @@ function App() {
   const [signedData, setSignedData] = useState<string | null>(null)
   const [processId, setProcessId] = useState<string | null>("0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc")
   const [dataText, setDataText] = useState<string | null>("Hello WAuth!")
+  const [actionText, setActionText] = useState<string | null>("Info")
   const [aoMsgId, setAoMsgId] = useState<string | null>(null)
   const [signatureInput, setSignatureInput] = useState<string | null>(null)
   const [signatureOutput, setSignatureOutput] = useState<string | null>(null)
@@ -168,7 +169,7 @@ function App() {
     const res = await ao.message({
       process: processId,
       data: dataText,
-      tags: [{ name: "Action", value: "Info" }],
+      tags: [{ name: "Action", value: actionText }],
       signer: signer
     })
     console.log(res)
@@ -248,6 +249,12 @@ function App() {
                   <input type="text" className="input" placeholder="Enter data"
                     defaultValue={"Hello WAuth!"}
                     onChange={(e) => setDataText(e.target.value)} />
+                </div>
+                <div className="info-item">
+                  <span className="label">Action:</span>
+                  <input type="text" className="input" placeholder="Enter action"
+                    defaultValue={"Info"}
+                    onChange={(e) => setActionText(e.target.value)} />
                 </div>
                 <button className="btn ao-btn" onClick={sendAoMessage}>Send Ao Message</button>
                 {aoMsgId && <a href={`https://aolink.arnode.asia/#/message/${aoMsgId}`} target="_blank" rel="noopener noreferrer">

@@ -44,6 +44,9 @@ onRecordCreateRequest((e) => {
         const res = $http.send({
             url: "http://localhost:8091/jwk",
             method: "GET",
+            // headers: {
+            //     "EPass": "ENCRYPTED_PASSWORD"
+            // }
         })
         const body = res.body
         const bodyJson = utils.bodyToJson(body)

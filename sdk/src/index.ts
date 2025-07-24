@@ -9,6 +9,8 @@ import { DataItem } from "@dha-team/arbundles";
 import axios from "axios";
 import base64url from "base64url";
 import { WAUTH_VERSION } from "./version";
+import { createModal, createModalContainer } from "./modal-helper";
+import { dryrun } from "@permaweb/aoconnect";
 
 
 export enum WAuthProviders {
@@ -25,6 +27,16 @@ export enum WalletActions {
     DISPATCH = "dispatch",
     SIGN_DATA_ITEM = "signDataItem",
     SIGNATURE = "signature"
+}
+
+type ModalTypes = "confirm-tx" | "password-new" | "password-existing"
+type ModalPayload = {
+    transaction?: Transaction
+    dataItem?: ArConnectDataItem
+}
+type ModalResult = {
+    proceed: boolean,
+    password?: string
 }
 
 export class WauthSigner {
@@ -166,6 +178,23 @@ export class WauthSigner {
     }
 }
 
+async function getTokenDetails(token: string) {
+    const res = await dryrun({
+        process: token,
+        tags: [{ name: "Action", value: "Info" }]
+    })
+    if (res.Messages.length < 1) throw new Error("No info message found")
+
+    const msg = res.Messages[1]
+    const tags = msg.Tags
+    // transform tags {name,value}[] to {name:value}
+    const tagsObj = tags.reduce((acc: any, tag: any) => {
+        acc[tag.name] = tag.value
+        return acc
+    }, {})
+
+    return tagsObj
+}
 
 export class WAuth {
     static devUrl = "http://localhost:8090"
@@ -230,10 +259,10 @@ export class WAuth {
                     if (actionTag?.value === "Transfer") {
                         // ask user for approval before proceeding
                         // window confirm dialog
-                        const confirmed = window.confirm(`Are you sure you want to proceed with this transaction?\n\n${JSON.stringify(payload)}`)
-                        if (!confirmed) {
-                            throw new Error("[wauth] Transaction cancelled by user")
-                        }
+                        // const confirmed = window.confirm(`Are you sure you want to proceed with this transaction?\n\n${JSON.stringify(payload)}`)
+                        // if (!confirmed) {
+                        //     throw new Error("[wauth] Transaction cancelled by user")
+                        // }
                     }
                 }
                 break;
@@ -244,10 +273,10 @@ export class WAuth {
                     if (actionTag?.value === "Transfer") {
                         // ask user for approval before proceeding
                         // window confirm dialog
-                        const confirmed = window.confirm(`Are you sure you want to proceed with this transaction?\n\n${JSON.stringify(payload)}`)
-                        if (!confirmed) {
-                            throw new Error("[wauth] Transaction cancelled by user")
-                        }
+                        // const confirmed = window.confirm(`Are you sure you want to proceed with this transaction?\n\n${JSON.stringify(payload)}`)
+                        // if (!confirmed) {
+                        //     throw new Error("[wauth] Transaction cancelled by user")
+                        // }
                     }
                 }
                 break;
@@ -277,6 +306,38 @@ export class WAuth {
             responseType: 'json'  // This tells axios to return raw binary data
         })
         return res.data
+    }
+
+    // There can be 2 types of modals:
+    // 1. Transaction verification- for when the user is about to transfer tokens and needs user confirmation,
+    //    this modal would have info text, amount to be transfered, and proceed/cancel buttons
+    // 2. Password input modal- either when user is connecting for the first time (ask for password and confirm password)
+    //    or when they already have an account and just logging in (ask for password),
+    //    this will be send in an encrypted way to the backend for use with decoding JWK
+    public async createModal(type: ModalTypes, payload: ModalPayload = {}, callback: (result: ModalResult) => void) {
+        // if type is confirm-tx, check payload.transaction or payload.dataItem and tell the user that some tokens are being transferred and its details, and ask for confirmation
+        // if type is password-new, ask for password and confirm password
+        // if type is password-existing, ask for password and return it
+        // based on the users actions, call the callback with the result
+
+        switch (type) {
+            case "confirm-tx":
+                // we have the tags and target in data
+                // assuming target is a token process id, fetch its details by sending Info message and forward its data to the modal
+                const data = payload.transaction || payload.dataItem
+
+                // create a modal with the payload
+                break;
+            case "password-new":
+                break;
+            case "password-existing":
+        }
+
+        const container = createModalContainer()
+        const modal = createModal()
+
+
+        document.body.appendChild(container)
     }
 
     public async connect({ provider, scopes }: { provider: WAuthProviders, scopes?: string[] }) {

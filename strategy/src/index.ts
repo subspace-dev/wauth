@@ -67,7 +67,7 @@ export default class WAuthStrategy implements Strategy {
         console.log("provider", provider)
         this.id = this.id + "-" + this.provider
         this.name = `${this.provider.charAt(0).toUpperCase() + this.provider.slice(1).toLowerCase()}`
-        this.walletRef = new WAuth({}) // auto reconnects based on localStorage
+        this.walletRef = new WAuth({ dev: process.env.NODE_ENV === "development" }) // auto reconnects based on localStorage
         this.authData = this.walletRef.getAuthData();
         this.logo = this.logos[provider]
         this.windowArweaveWalletBackup = null;
