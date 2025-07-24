@@ -871,12 +871,71 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
     header.appendChild(subtitle)
     modal.appendChild(header)
 
-    // Form container
-    const form = document.createElement("div")
+    // Warning section
+    const warning = document.createElement("div")
+    warning.className = "modal-warning"
+    warning.style.background = "rgba(255, 193, 7, 0.1)"
+    warning.style.border = "1px solid rgba(255, 193, 7, 0.3)"
+    warning.style.borderRadius = "12px"
+    warning.style.padding = "16px"
+    warning.style.margin = "0 0 20px 0"
+    warning.style.display = "flex"
+    warning.style.alignItems = "flex-start"
+    warning.style.gap = "12px"
+
+    const warningIcon = document.createElement("div")
+    warningIcon.textContent = "⚠️"
+    warningIcon.style.fontSize = "1.2rem"
+    warningIcon.style.flexShrink = "0"
+    warningIcon.style.marginTop = "2px"
+
+    const warningContent = document.createElement("div")
+    warningContent.style.flex = "1"
+
+    const warningTitle = document.createElement("div")
+    warningTitle.textContent = "Important: Store Your Password Safely"
+    warningTitle.style.fontSize = "0.95rem"
+    warningTitle.style.fontWeight = "600"
+    warningTitle.style.color = "#ffc107"
+    warningTitle.style.marginBottom = "6px"
+
+    const warningText = document.createElement("div")
+    warningText.textContent = "Save this password in a password manager or secure location. If you forget your master password, you will permanently lose access to your wallet and funds. There is no password recovery option."
+    warningText.style.fontSize = "0.85rem"
+    warningText.style.color = "rgba(255, 255, 255, 0.8)"
+    warningText.style.lineHeight = "1.4"
+
+    warningContent.appendChild(warningTitle)
+    warningContent.appendChild(warningText)
+    warning.appendChild(warningIcon)
+    warning.appendChild(warningContent)
+    modal.appendChild(warning)
+
+    // Form container - use actual form element for password manager support
+    const form = document.createElement("form")
     form.className = "modal-form"
+    form.action = "#" // Required for password manager detection
+    form.method = "post" // Required for password manager detection
     form.style.display = "flex"
     form.style.flexDirection = "column"
     form.style.gap = "16px"
+    form.autocomplete = "on"
+    form.onsubmit = (e) => e.preventDefault() // Prevent actual form submission
+
+    // Hidden username field to help password managers understand context
+    const hiddenUsernameInput = document.createElement("input")
+    hiddenUsernameInput.type = "text"
+    hiddenUsernameInput.name = "username"
+    hiddenUsernameInput.id = "username-new"
+    hiddenUsernameInput.autocomplete = "username"
+    hiddenUsernameInput.value = `wauth-${window.location.hostname}` // Make it unique per domain
+    hiddenUsernameInput.readOnly = true
+    hiddenUsernameInput.style.display = "none"
+    hiddenUsernameInput.style.position = "absolute"
+    hiddenUsernameInput.style.left = "-9999px"
+    hiddenUsernameInput.tabIndex = -1
+    hiddenUsernameInput.setAttribute('aria-hidden', 'true')
+    form.appendChild(hiddenUsernameInput)
 
     // Password input
     const passwordContainer = document.createElement("div")
@@ -886,13 +945,19 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
 
     const passwordLabel = document.createElement("label")
     passwordLabel.textContent = "Master Password"
+    passwordLabel.htmlFor = "new-password"
     passwordLabel.style.fontSize = "0.9rem"
     passwordLabel.style.color = "rgba(255, 255, 255, 0.8)"
     passwordLabel.style.fontWeight = "600"
 
     const passwordInput = document.createElement("input")
     passwordInput.type = "password"
+    passwordInput.name = "password"
+    passwordInput.id = "new-password"
+    passwordInput.autocomplete = "new-password"
     passwordInput.placeholder = "Enter your master password"
+    passwordInput.required = true // Required for password manager detection
+    passwordInput.minLength = 8 // Helps password managers understand requirements
     passwordInput.style.padding = "12px 16px"
     passwordInput.style.borderRadius = "8px"
     passwordInput.style.border = "1px solid rgba(255, 255, 255, 0.2)"
@@ -922,13 +987,18 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
 
     const confirmLabel = document.createElement("label")
     confirmLabel.textContent = "Confirm Password"
+    confirmLabel.htmlFor = "confirm-password"
     confirmLabel.style.fontSize = "0.9rem"
     confirmLabel.style.color = "rgba(255, 255, 255, 0.8)"
     confirmLabel.style.fontWeight = "600"
 
     const confirmInput = document.createElement("input")
     confirmInput.type = "password"
+    confirmInput.name = "confirmPassword"
+    confirmInput.id = "confirm-password"
+    confirmInput.autocomplete = "new-password"
     confirmInput.placeholder = "Confirm your master password"
+    confirmInput.required = true // Required for password manager detection
     confirmInput.style.padding = "12px 16px"
     confirmInput.style.borderRadius = "8px"
     confirmInput.style.border = "1px solid rgba(255, 255, 255, 0.2)"
@@ -1043,6 +1113,7 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
     actions.style.marginTop = "10px"
 
     const createBtn = document.createElement("button")
+    createBtn.type = "submit" // Important for password manager detection
     createBtn.className = "modal-btn modal-btn-primary"
     createBtn.textContent = "Create Wallet"
     createBtn.style.width = "100%"
@@ -1067,43 +1138,6 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
         createBtn.style.transform = "translateY(0)"
         createBtn.style.boxShadow = "0 4px 12px rgba(108, 99, 255, 0.4)"
     }
-
-    createBtn.onclick = () => {
-        const password = passwordInput.value
-        const confirmPassword = confirmInput.value
-
-        // Validation
-        if (!password) {
-            errorMessage.textContent = "Password is required"
-            errorMessage.style.display = "block"
-            passwordInput.focus()
-            return
-        }
-
-        if (password.length < 8) {
-            errorMessage.textContent = "Password must be at least 8 characters long"
-            errorMessage.style.display = "block"
-            passwordInput.focus()
-            return
-        }
-
-        if (!checkPasswordStrength(password)) {
-            errorMessage.textContent = "Password is too weak. Please use a stronger password."
-            errorMessage.style.display = "block"
-            passwordInput.focus()
-            return
-        }
-
-        if (password !== confirmPassword) {
-            errorMessage.textContent = "Passwords do not match"
-            errorMessage.style.display = "block"
-            confirmInput.focus()
-            return
-        }
-
-        onResult({ proceed: true, password })
-    }
-    actions.appendChild(createBtn)
 
     const cancelBtn = document.createElement("button")
     cancelBtn.className = "modal-btn modal-btn-secondary"
@@ -1131,6 +1165,62 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
         cancelBtn.style.borderColor = "rgba(255, 255, 255, 0.2)"
     }
     cancelBtn.onclick = () => onResult({ proceed: false })
+
+    // Handle form submission and Enter key
+    const handleSubmit = (event?: Event) => {
+        const password = passwordInput.value
+        const confirmPassword = confirmInput.value
+
+        // Validation
+        if (!password) {
+            errorMessage.textContent = "Password is required"
+            errorMessage.style.display = "block"
+            passwordInput.focus()
+            return false
+        }
+
+        if (password.length < 8) {
+            errorMessage.textContent = "Password must be at least 8 characters long"
+            errorMessage.style.display = "block"
+            passwordInput.focus()
+            return false
+        }
+
+        if (!checkPasswordStrength(password)) {
+            errorMessage.textContent = "Password is too weak. Please use a stronger password."
+            errorMessage.style.display = "block"
+            passwordInput.focus()
+            return false
+        }
+
+        if (password !== confirmPassword) {
+            errorMessage.textContent = "Passwords do not match"
+            errorMessage.style.display = "block"
+            confirmInput.focus()
+            return false
+        }
+
+        // For password managers to work, always trigger the result with a delay
+        // This allows password managers to detect the successful form submission
+        setTimeout(() => {
+            onResult({ proceed: true, password })
+        }, 150) // Delay to let password managers detect the submission
+
+        return true
+    }
+
+    // Set button and form handlers - need both for click and submit to work
+    createBtn.onclick = (e) => {
+        e.preventDefault()
+        handleSubmit(e)
+    }
+
+    form.onsubmit = (e) => {
+        e.preventDefault()
+        handleSubmit(e)
+    }
+
+    actions.appendChild(createBtn)
     actions.appendChild(cancelBtn)
 
     modal.appendChild(actions)
@@ -1138,11 +1228,10 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
     // Focus on first input
     setTimeout(() => passwordInput.focus(), 100)
 
-    // Handle Enter key
     const handleEnter = (e: KeyboardEvent) => {
         if (e.key === "Enter") {
             e.preventDefault()
-            createBtn.click()
+            handleSubmit()
         }
     }
     passwordInput.addEventListener("keydown", handleEnter)
@@ -1200,12 +1289,73 @@ export function createPasswordExistingModal(payload: ModalPayload, onResult: (re
     header.appendChild(subtitle)
     modal.appendChild(header)
 
-    // Form container
-    const form = document.createElement("div")
+    // Warning section (only show if there's an error message to keep login modal clean)
+    if (payload.errorMessage) {
+        const warning = document.createElement("div")
+        warning.className = "modal-warning"
+        warning.style.background = "rgba(255, 107, 107, 0.1)"
+        warning.style.border = "1px solid rgba(255, 107, 107, 0.3)"
+        warning.style.borderRadius = "12px"
+        warning.style.padding = "16px"
+        warning.style.margin = "0 0 20px 0"
+        warning.style.display = "flex"
+        warning.style.alignItems = "flex-start"
+        warning.style.gap = "12px"
+
+        const warningIcon = document.createElement("div")
+        warningIcon.textContent = "⚠️"
+        warningIcon.style.fontSize = "1.2rem"
+        warningIcon.style.flexShrink = "0"
+        warningIcon.style.marginTop = "2px"
+
+        const warningContent = document.createElement("div")
+        warningContent.style.flex = "1"
+
+        const warningTitle = document.createElement("div")
+        warningTitle.textContent = "Reminder: No Password Recovery"
+        warningTitle.style.fontSize = "0.95rem"
+        warningTitle.style.fontWeight = "600"
+        warningTitle.style.color = "#ff6b6b"
+        warningTitle.style.marginBottom = "6px"
+
+        const warningText = document.createElement("div")
+        warningText.textContent = "If you've forgotten your master password, there is no way to recover it. Make sure to store it securely in a password manager for future access."
+        warningText.style.fontSize = "0.85rem"
+        warningText.style.color = "rgba(255, 255, 255, 0.8)"
+        warningText.style.lineHeight = "1.4"
+
+        warningContent.appendChild(warningTitle)
+        warningContent.appendChild(warningText)
+        warning.appendChild(warningIcon)
+        warning.appendChild(warningContent)
+        modal.appendChild(warning)
+    }
+
+    // Form container - use actual form element for password manager support
+    const form = document.createElement("form")
     form.className = "modal-form"
+    form.action = "#" // Required for password manager detection
+    form.method = "post" // Required for password manager detection
     form.style.display = "flex"
     form.style.flexDirection = "column"
     form.style.gap = "16px"
+    form.autocomplete = "on"
+    form.onsubmit = (e) => e.preventDefault() // Prevent actual form submission
+
+    // Hidden username field to help password managers understand context
+    const hiddenUsernameInput = document.createElement("input")
+    hiddenUsernameInput.type = "text"
+    hiddenUsernameInput.name = "username"
+    hiddenUsernameInput.id = "username-existing"
+    hiddenUsernameInput.autocomplete = "username"
+    hiddenUsernameInput.value = `wauth-${window.location.hostname}` // Make it unique per domain
+    hiddenUsernameInput.readOnly = true
+    hiddenUsernameInput.style.display = "none"
+    hiddenUsernameInput.style.position = "absolute"
+    hiddenUsernameInput.style.left = "-9999px"
+    hiddenUsernameInput.tabIndex = -1
+    hiddenUsernameInput.setAttribute('aria-hidden', 'true')
+    form.appendChild(hiddenUsernameInput)
 
     // Password input
     const passwordContainer = document.createElement("div")
@@ -1215,13 +1365,18 @@ export function createPasswordExistingModal(payload: ModalPayload, onResult: (re
 
     const passwordLabel = document.createElement("label")
     passwordLabel.textContent = "Master Password"
+    passwordLabel.htmlFor = "current-password"
     passwordLabel.style.fontSize = "0.9rem"
     passwordLabel.style.color = "rgba(255, 255, 255, 0.8)"
     passwordLabel.style.fontWeight = "600"
 
     const passwordInput = document.createElement("input")
     passwordInput.type = "password"
+    passwordInput.name = "password"
+    passwordInput.id = "current-password"
+    passwordInput.autocomplete = "current-password"
     passwordInput.placeholder = "Enter your master password"
+    passwordInput.required = true // Required for password manager detection
     passwordInput.style.padding = "12px 16px"
     passwordInput.style.borderRadius = "8px"
     passwordInput.style.border = "1px solid rgba(255, 255, 255, 0.2)"
@@ -1281,6 +1436,7 @@ export function createPasswordExistingModal(payload: ModalPayload, onResult: (re
     actions.style.marginTop = "10px"
 
     const unlockBtn = document.createElement("button")
+    unlockBtn.type = "submit" // Important for password manager detection
     unlockBtn.className = "modal-btn modal-btn-primary"
     unlockBtn.textContent = "Unlock Wallet"
     unlockBtn.style.width = "100%"
@@ -1306,19 +1462,6 @@ export function createPasswordExistingModal(payload: ModalPayload, onResult: (re
         unlockBtn.style.boxShadow = "0 4px 12px rgba(108, 99, 255, 0.4)"
     }
 
-    unlockBtn.onclick = () => {
-        const password = passwordInput.value
-
-        // Validation
-        if (!password) {
-            errorMessage.textContent = "Password is required"
-            errorMessage.style.display = "block"
-            passwordInput.focus()
-            return
-        }
-
-        onResult({ proceed: true, password })
-    }
     actions.appendChild(unlockBtn)
 
     const cancelBtn = document.createElement("button")
@@ -1351,6 +1494,38 @@ export function createPasswordExistingModal(payload: ModalPayload, onResult: (re
 
     modal.appendChild(actions)
 
+    // Handle form submission and Enter key
+    const handleSubmit = (event?: Event) => {
+        const password = passwordInput.value
+
+        // Validation
+        if (!password) {
+            errorMessage.textContent = "Password is required"
+            errorMessage.style.display = "block"
+            passwordInput.focus()
+            return false
+        }
+
+        // For password managers to work, always trigger the result with a delay
+        // This allows password managers to detect the successful form submission
+        setTimeout(() => {
+            onResult({ proceed: true, password })
+        }, 150) // Delay to let password managers detect the submission
+
+        return true
+    }
+
+    // Set button and form handlers - need both for click and submit to work
+    unlockBtn.onclick = (e) => {
+        e.preventDefault()
+        handleSubmit(e)
+    }
+
+    form.onsubmit = (e) => {
+        e.preventDefault()
+        handleSubmit(e)
+    }
+
     // Focus on password input
     setTimeout(() => passwordInput.focus(), 100)
 
@@ -1358,7 +1533,7 @@ export function createPasswordExistingModal(payload: ModalPayload, onResult: (re
     const handleEnter = (e: KeyboardEvent) => {
         if (e.key === "Enter") {
             e.preventDefault()
-            unlockBtn.click()
+            handleSubmit()
         }
     }
     passwordInput.addEventListener("keydown", handleEnter)

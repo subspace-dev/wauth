@@ -431,6 +431,33 @@ export class WAuth {
         this.sessionKey = null;
     }
 
+    private clearAllAuthData(): void {
+        // Clear session password and storage
+        this.clearSessionPassword();
+
+        // Clear PocketBase auth data
+        this.pb.authStore.clear();
+
+        // Clear additional localStorage items if any
+        if (typeof window !== 'undefined') {
+            // Clear any PocketBase auth data from localStorage
+            localStorage.removeItem('pocketbase_auth');
+            // Clear any other wauth-related items
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('wauth_')) {
+                    localStorage.removeItem(key);
+                }
+            });
+        }
+
+        // Reset instance variables
+        this.authData = null;
+        this.wallet = null;
+        this.authRecord = null;
+
+        console.log("[wauth] Cleared all authentication data");
+    }
+
     constructor({ dev = false, url, backendUrl }: { dev?: boolean, url?: string, backendUrl?: string }) {
         if (dev == undefined) {
             dev = process.env.NODE_ENV === "development"
@@ -705,6 +732,8 @@ export class WAuth {
                     });
 
                     if (!passwordResult.proceed || !passwordResult.password) {
+                        // User cancelled - clear all authentication data
+                        this.clearAllAuthData();
                         throw new Error("Password required to access existing wallet");
                     }
 
@@ -736,6 +765,8 @@ export class WAuth {
                 });
 
                 if (!result.proceed || !result.password) {
+                    // User cancelled - clear all authentication data
+                    this.clearAllAuthData();
                     throw new Error("Password required to create wallet");
                 }
 
@@ -753,8 +784,8 @@ export class WAuth {
             }
         } catch (e) {
             console.error("[wauth]", e)
-            // Clear session password on error
-            this.clearSessionPassword();
+            // Clear all authentication data on error
+            this.clearAllAuthData();
             throw e;
         }
 
@@ -1031,10 +1062,6 @@ export class WAuth {
     }
 
     public logout() {
-        this.authData = null;
-        this.wallet = null;
-        this.authRecord = null;
-        this.clearSessionPassword(); // Clear session password and storage
-        this.pb.authStore.clear();
+        this.clearAllAuthData();
     }
 }
