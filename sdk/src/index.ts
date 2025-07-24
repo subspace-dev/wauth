@@ -30,14 +30,19 @@ export enum WalletActions {
 }
 
 type ModalTypes = "confirm-tx" | "password-new" | "password-existing"
+export type { ModalTypes }
+
 type ModalPayload = {
     transaction?: Transaction
     dataItem?: ArConnectDataItem
 }
+export type { ModalPayload }
+
 type ModalResult = {
     proceed: boolean,
     password?: string
 }
+export type { ModalResult }
 
 export class WauthSigner {
     private wauth: WAuth;
@@ -251,18 +256,26 @@ export class WAuth {
         if (!this.wallet) this.wallet = await this.getWallet()
         if (!this.wallet) throw new Error("[wauth] No wallet found")
 
+        // Helper to show modal and await result
+        const showModal = (type: ModalTypes, payload: ModalPayload): Promise<ModalResult> => {
+            return new Promise((resolve) => {
+                this.createModal(type, payload, (result) => {
+                    resolve(result)
+                })
+            })
+        }
+
         switch (action) {
             case WalletActions.SIGN:
                 // check for Action=Transfer Tag and ask user for approval
                 if (payload && payload.transaction && payload.transaction.tags) {
                     const actionTag = payload.transaction.tags.find((tag: Tag) => tag.name === "Action");
                     if (actionTag?.value === "Transfer") {
-                        // ask user for approval before proceeding
-                        // window confirm dialog
-                        // const confirmed = window.confirm(`Are you sure you want to proceed with this transaction?\n\n${JSON.stringify(payload)}`)
-                        // if (!confirmed) {
-                        //     throw new Error("[wauth] Transaction cancelled by user")
-                        // }
+                        // Show modal and await user confirmation
+                        const result = await showModal("confirm-tx", { transaction: payload.transaction })
+                        if (!result.proceed) {
+                            throw new Error("[wauth] Transaction cancelled by user")
+                        }
                     }
                 }
                 break;
@@ -271,32 +284,17 @@ export class WAuth {
                 if (payload && payload.dataItem && payload.dataItem.tags) {
                     const actionTag = payload.dataItem.tags.find((tag: Tag) => tag.name === "Action");
                     if (actionTag?.value === "Transfer") {
-                        // ask user for approval before proceeding
-                        // window confirm dialog
-                        // const confirmed = window.confirm(`Are you sure you want to proceed with this transaction?\n\n${JSON.stringify(payload)}`)
-                        // if (!confirmed) {
-                        //     throw new Error("[wauth] Transaction cancelled by user")
-                        // }
+                        // Show modal and await user confirmation
+                        const result = await showModal("confirm-tx", { dataItem: payload.dataItem })
+                        if (!result.proceed) {
+                            throw new Error("[wauth] Transaction cancelled by user")
+                        }
                     }
                 }
                 break;
-
         }
 
-
-
-
         // send the action and payload to the backend
-        // const res = await fetch(`${this.backendUrl}/wallet-action`, {
-        //     method: "POST",
-        //     headers: {
-        //         "Content-Type": "application/json",
-        //         "Authorization": `Bearer ${this.getAuthToken()}`
-        //     },
-        //     body: JSON.stringify({ action, payload })
-        // })
-        // console.log("res headers", res.headers.entries())
-
         const res = await axios.post(`${this.backendUrl}/wallet-action`, { action, payload }, {
             headers: {
                 "Content-Type": "application/json",
@@ -334,8 +332,14 @@ export class WAuth {
         }
 
         const container = createModalContainer()
-        const modal = createModal()
-
+        const modal = createModal(type, payload, (result) => {
+            // Remove the modal container from the DOM after callback
+            if (container.parentNode) {
+                container.parentNode.removeChild(container)
+            }
+            callback(result)
+        })
+        container.appendChild(modal)
 
         document.body.appendChild(container)
     }
