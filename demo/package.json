@@ -12,6 +12,7 @@
   "dependencies": {
     "@arweave-wallet-kit/core": "^0.1.1",
     "@arweave-wallet-kit/react": "^0.3.2",
+    "@arweave-wallet-kit/wander-strategy": "^0.1.2",
     "@dha-team/arbundles": "^1.0.3",
     "@permaweb/aoconnect": "^0.0.85",
     "@wauth/strategy": "../strategy",

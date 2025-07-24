@@ -2,7 +2,7 @@ import { ConnectButton, useActiveAddress, useApi, useConnection } from "@arweave
 import { fixConnection, WAuthProviders } from "@wauth/strategy"
 import { useEffect, useState } from "react"
 // import { getActiveWAuthProvider, getStrategy } from "../lib/strategy"
-import { connect, createDataItemSigner, message } from "@permaweb/aoconnect"
+import { connect, createDataItemSigner, createSigner, message } from "@permaweb/aoconnect"
 import Arweave from "arweave/web"
 
 function App() {
@@ -21,6 +21,13 @@ function App() {
   const [aoMsgId, setAoMsgId] = useState<string | null>(null)
   const [signatureInput, setSignatureInput] = useState<string | null>(null)
   const [signatureOutput, setSignatureOutput] = useState<string | null>(null)
+
+  // Token transfer states
+  const [tokenProcessId, setTokenProcessId] = useState<string>("0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc")
+  const [transferQuantity, setTransferQuantity] = useState<string>("1")
+  const [transferRecipient, setTransferRecipient] = useState<string>("")
+  const [transferMsgId, setTransferMsgId] = useState<string | null>(null)
+  const [isTransferring, setIsTransferring] = useState(false)
 
   const { connected, disconnect } = useConnection()
 
@@ -42,7 +49,7 @@ function App() {
   //   setAccessToken(data.accessToken)
   //   setEmail(data.email)
   // })
-  api?.onAuthDataChange((data) => {
+  api?.onAuthDataChange && api?.onAuthDataChange((data) => {
     console.log("[app] auth data changed", data)
     setAccessToken(data.accessToken)
     setEmail(data.email)
@@ -181,6 +188,48 @@ function App() {
     const signature = await api.signature(signatureInput)
     console.log(signature)
     setSignatureOutput(Buffer.from(signature).toString("hex"))
+  }
+
+  async function transferTokens() {
+    if (!transferRecipient.trim()) {
+      alert("Please enter a recipient address")
+      return
+    }
+
+    if (!transferQuantity.trim() || isNaN(Number(transferQuantity))) {
+      alert("Please enter a valid quantity")
+      return
+    }
+
+    if (!tokenProcessId.trim()) {
+      alert("Please enter a token process ID")
+      return
+    }
+
+    try {
+      setIsTransferring(true)
+      const signer = api.getAoSigner()
+      const ao = connect({ MODE: "legacy" })
+
+      const res = await ao.message({
+        process: tokenProcessId,
+        tags: [
+          { name: "Action", value: "Transfer" },
+          { name: "Recipient", value: transferRecipient },
+          { name: "Quantity", value: transferQuantity }
+        ],
+        signer: signer
+      })
+
+      console.log("Transfer result:", res)
+      setTransferMsgId(res)
+      // alert("Transfer initiated successfully!")
+    } catch (error) {
+      console.error("Transfer error:", error)
+      // alert(`Transfer failed: ${error}`)
+    } finally {
+      setIsTransferring(false)
+    }
   }
 
   return (
@@ -340,6 +389,55 @@ function App() {
                 </div>
               </div>
             )}
+
+            {connected && <div className="card">
+              <h3 className="card-title">💸 Token Transfer</h3>
+              <div className="info-item">
+                <span className="label">Token Process ID:</span>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Enter token process ID"
+                  value={tokenProcessId}
+                  onChange={(e) => setTokenProcessId(e.target.value)}
+                />
+              </div>
+              <div className="info-item">
+                <span className="label">Quantity:</span>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Enter quantity to transfer"
+                  value={transferQuantity}
+                  onChange={(e) => setTransferQuantity(e.target.value)}
+                />
+              </div>
+              <div className="info-item">
+                <span className="label">Recipient Address:</span>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Enter recipient wallet address"
+                  value={transferRecipient}
+                  onChange={(e) => setTransferRecipient(e.target.value)}
+                />
+              </div>
+              <button
+                className="btn"
+                onClick={transferTokens}
+                disabled={isTransferring}
+              >
+                {isTransferring ? "Transferring..." : "💸 Transfer Tokens"}
+              </button>
+              {transferMsgId && (
+                <div className="info-item">
+                  <span className="label">Transfer Message:</span>
+                  <a href={`https://aolink.arnode.asia/#/message/${transferMsgId}`} target="_blank" rel="noopener noreferrer">
+                    <button className="btn">View on AO Link</button>
+                  </a>
+                </div>
+              )}
+            </div>}
           </div>
         </main>
 

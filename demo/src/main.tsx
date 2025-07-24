@@ -5,6 +5,7 @@ import { ArweaveWalletKit } from '@arweave-wallet-kit/react'
 import { getStrategy } from '../lib/strategy.ts'
 import { WAuthProviders } from '@wauth/strategy'
 import type { Strategy } from '@arweave-wallet-kit/core/strategy'
+import WanderStrategy from "@arweave-wallet-kit/wander-strategy"
 
 
 export default function Main() {
@@ -12,8 +13,13 @@ export default function Main() {
     getStrategy(WAuthProviders.Github),
     getStrategy(WAuthProviders.Google),
     getStrategy(WAuthProviders.Discord),
-    getStrategy(WAuthProviders.X)
+    getStrategy(WAuthProviders.X),
   ]
+
+  // if (process.env.NODE_ENV === "development") {
+  //   // for comparison during development
+  //   // strategies.push(new WanderStrategy() as any)
+  // }
 
   return <ArweaveWalletKit
     config={{

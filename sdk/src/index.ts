@@ -35,6 +35,7 @@ export type { ModalTypes }
 type ModalPayload = {
     transaction?: Transaction
     dataItem?: ArConnectDataItem
+    tokenDetails?: any
 }
 export type { ModalPayload }
 
@@ -190,7 +191,8 @@ async function getTokenDetails(token: string) {
     })
     if (res.Messages.length < 1) throw new Error("No info message found")
 
-    const msg = res.Messages[1]
+    // console.log("[wauth] token details", res)
+    const msg = res.Messages[0]
     const tags = msg.Tags
     // transform tags {name,value}[] to {name:value}
     const tagsObj = tags.reduce((acc: any, tag: any) => {
@@ -318,20 +320,9 @@ export class WAuth {
         // if type is password-existing, ask for password and return it
         // based on the users actions, call the callback with the result
 
-        switch (type) {
-            case "confirm-tx":
-                // we have the tags and target in data
-                // assuming target is a token process id, fetch its details by sending Info message and forward its data to the modal
-                const data = payload.transaction || payload.dataItem
-
-                // create a modal with the payload
-                break;
-            case "password-new":
-                break;
-            case "password-existing":
-        }
-
         const container = createModalContainer()
+
+        // Create modal immediately with current payload
         const modal = createModal(type, payload, (result) => {
             // Remove the modal container from the DOM after callback
             if (container.parentNode) {
@@ -341,7 +332,82 @@ export class WAuth {
         })
         container.appendChild(modal)
 
+        // Add powered by element as sibling to modal content
+        const powered = document.createElement("div")
+        powered.className = "wauth-powered"
+        powered.innerHTML = '<a href="https://wauth_subspace.ar.io" target="_blank">powered by wauth</a>'
+        powered.style.position = "absolute"
+        powered.style.bottom = "20px"
+        powered.style.textAlign = "center"
+        powered.style.fontSize = "0.9rem"
+        powered.style.color = "rgba(255, 255, 255, 0.5)"
+        powered.style.opacity = "0.8"
+        powered.style.letterSpacing = "0.5px"
+        powered.style.fontWeight = "500"
+        powered.style.left = "0"
+        powered.style.right = "0"
+        powered.style.transition = "all 0.2s ease"
+        powered.style.textShadow = "0 1px 2px rgba(0, 0, 0, 0.5)"
+
+        const poweredLink = powered.querySelector('a')
+        if (poweredLink) {
+            poweredLink.style.color = "inherit"
+            poweredLink.style.textDecoration = "none"
+            poweredLink.style.transition = "all 0.2s ease"
+            poweredLink.style.borderRadius = "8px"
+            poweredLink.style.padding = "6px 12px"
+            poweredLink.style.background = "rgba(255, 255, 255, 0.05)"
+            poweredLink.style.backdropFilter = "blur(10px)"
+            poweredLink.style.border = "1px solid rgba(255, 255, 255, 0.1)"
+
+            poweredLink.onmouseover = () => {
+                poweredLink.style.color = "rgba(255, 255, 255, 0.9)"
+                poweredLink.style.background = "rgba(255, 255, 255, 0.1)"
+                poweredLink.style.borderColor = "rgba(255, 255, 255, 0.2)"
+                poweredLink.style.transform = "translateY(-1px)"
+                poweredLink.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.3)"
+            }
+            poweredLink.onmouseleave = () => {
+                poweredLink.style.color = "rgba(255, 255, 255, 0.5)"
+                poweredLink.style.background = "rgba(255, 255, 255, 0.05)"
+                poweredLink.style.borderColor = "rgba(255, 255, 255, 0.1)"
+                poweredLink.style.transform = "translateY(0)"
+                poweredLink.style.boxShadow = "none"
+            }
+        }
+        container.appendChild(powered)
+
         document.body.appendChild(container)
+
+        // Now fetch token details asynchronously and update the modal
+        if (type === "confirm-tx") {
+            const data = payload.transaction || payload.dataItem
+
+            if (data && data.target) {
+                try {
+                    console.log("[wauth] Fetching token details for:", data.target)
+                    const tokenDetails = await getTokenDetails(data.target)
+                    console.log("[wauth] Token details:", tokenDetails)
+
+                    // Update the modal with token details
+                    const enhancedPayload = { ...payload, tokenDetails }
+                    const updatedModal = createModal(type, enhancedPayload, (result) => {
+                        // Remove the modal container from the DOM after callback
+                        if (container.parentNode) {
+                            container.parentNode.removeChild(container)
+                        }
+                        callback(result)
+                    })
+
+                    // Replace the existing modal content (keep powered by element)
+                    container.replaceChild(updatedModal, modal)
+
+                } catch (error) {
+                    console.warn("[wauth] Failed to fetch token details:", error)
+                    // Modal continues to work without token details
+                }
+            }
+        }
     }
 
     public async connect({ provider, scopes }: { provider: WAuthProviders, scopes?: string[] }) {
