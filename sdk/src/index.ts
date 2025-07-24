@@ -192,6 +192,7 @@ type ModalPayload = {
     transaction?: Transaction
     dataItem?: ArConnectDataItem
     tokenDetails?: any
+    errorMessage?: string
 }
 export type { ModalPayload }
 
@@ -692,39 +693,55 @@ export class WAuth {
             const existingWallet = await this.checkExistingWallet();
 
             if (existingWallet) {
-                // Existing user - ask for password to decrypt wallet
-                const password = prompt("Enter your master password to decrypt your wallet:");
-                if (!password) {
-                    throw new Error("Password required to access existing wallet");
-                }
+                // Existing user - ask for password to decrypt wallet using modal
+                let passwordResult: ModalResult;
+                let attempts = 0;
+                const maxAttempts = 3;
+                let errorMessage = "";
 
-                // Verify password before storing it
-                const isValidPassword = await this.verifyPassword(password);
-                if (!isValidPassword) {
-                    throw new Error("Invalid password. Please check your password and try again.");
-                }
+                do {
+                    passwordResult = await new Promise<ModalResult>((resolve) => {
+                        this.createModal("password-existing", { errorMessage }, resolve);
+                    });
+
+                    if (!passwordResult.proceed || !passwordResult.password) {
+                        throw new Error("Password required to access existing wallet");
+                    }
+
+                    // Verify password before storing it
+                    const isValidPassword = await this.verifyPassword(passwordResult.password);
+                    if (isValidPassword) {
+                        break; // Password is valid, exit loop
+                    }
+
+                    attempts++;
+                    if (attempts >= maxAttempts) {
+                        throw new Error("Too many failed password attempts. Please try again later.");
+                    }
+
+                    // Set error message for next modal display
+                    errorMessage = `Invalid password. Please try again. (${maxAttempts - attempts} attempts remaining)`;
+                } while (attempts < maxAttempts);
 
                 // Store password in session for future use
-                this.sessionPassword = password;
-                await this.storePasswordInSession(password);
+                this.sessionPassword = passwordResult.password;
+                await this.storePasswordInSession(passwordResult.password);
 
                 // Get wallet (password is already verified)
                 this.wallet = await this.getWallet();
             } else {
-                // New user - ask for password to create wallet
-                const password = prompt("Create a master password for your new wallet:");
-                if (!password) {
+                // New user - ask for password to create wallet using modal
+                const result = await new Promise<ModalResult>((resolve) => {
+                    this.createModal("password-new", {}, resolve);
+                });
+
+                if (!result.proceed || !result.password) {
                     throw new Error("Password required to create wallet");
                 }
 
-                const confirmPassword = prompt("Confirm your master password:");
-                if (password !== confirmPassword) {
-                    throw new Error("Passwords do not match");
-                }
-
                 // Store password in session
-                this.sessionPassword = password;
-                await this.storePasswordInSession(password);
+                this.sessionPassword = result.password;
+                await this.storePasswordInSession(result.password);
 
                 // Create new wallet
                 this.wallet = await this.getWallet();

@@ -231,7 +231,11 @@ function shouldDisconnect(address: string | undefined, connected: boolean) {
 }
 
 function fixConnection(address: string | undefined, connected: boolean, disconnect: () => void) {
-    if (shouldDisconnect(address, connected)) { disconnect() }
+    if (shouldDisconnect(address, connected)) {
+        localStorage.removeItem("pocketbase_auth")
+        localStorage.removeItem("wallet_kit_strategy_id")
+        disconnect()
+    }
 }
 
 export { WAuthProviders, fixConnection }
