@@ -1,6 +1,88 @@
 
 import type { ModalTypes, ModalPayload, ModalResult } from "./index";
 
+// Import HTMLSanitizer for safe DOM manipulation
+class HTMLSanitizer {
+    /**
+     * Escapes HTML entities to prevent XSS attacks
+     * @param text - The text to escape
+     * @returns Escaped text safe for innerHTML
+     */
+    static escapeHTML(text: string): string {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    /**
+     * Creates a safe HTML string with basic formatting
+     * @param text - The text content
+     * @param allowedTags - Array of allowed HTML tags (default: ['br', 'strong', 'em'])
+     * @returns Sanitized HTML string
+     */
+    static sanitizeHTML(text: string, allowedTags: string[] = ['br', 'strong', 'em']): string {
+        // First escape all HTML
+        let sanitized = this.escapeHTML(text);
+
+        // Then allow specific tags back in a controlled way
+        allowedTags.forEach(tag => {
+            const escapedOpenTag = `&lt;${tag}&gt;`;
+            const escapedCloseTag = `&lt;/${tag}&gt;`;
+            const openTagRegex = new RegExp(escapedOpenTag, 'gi');
+            const closeTagRegex = new RegExp(escapedCloseTag, 'gi');
+
+            sanitized = sanitized.replace(openTagRegex, `<${tag}>`);
+            sanitized = sanitized.replace(closeTagRegex, `</${tag}>`);
+        });
+
+        return sanitized;
+    }
+
+    /**
+     * Safely sets innerHTML with sanitization
+     * @param element - The DOM element
+     * @param html - The HTML content to set
+     * @param allowedTags - Array of allowed HTML tags
+     */
+    static safeSetInnerHTML(element: HTMLElement, html: string, allowedTags?: string[]): void {
+        element.innerHTML = this.sanitizeHTML(html, allowedTags);
+    }
+
+    /**
+     * Creates a safe link element
+     * @param href - The URL (will be validated)
+     * @param text - The link text (will be escaped)
+     * @param target - Link target (default: '_blank')
+     * @returns HTMLAnchorElement
+     */
+    static createSafeLink(href: string, text: string, target: string = '_blank'): HTMLAnchorElement {
+        const link = document.createElement('a');
+
+        // Validate URL - only allow http/https
+        try {
+            const url = new URL(href);
+            if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+                throw new Error('Invalid protocol');
+            }
+            link.href = url.toString();
+        } catch {
+            // If URL is invalid, don't set href
+            link.href = '#';
+            console.warn('Invalid URL provided to createSafeLink:', href);
+        }
+
+        link.textContent = text; // textContent automatically escapes
+        link.target = target;
+
+        // Security attributes for external links
+        if (target === '_blank') {
+            link.rel = 'noopener noreferrer';
+        }
+
+        return link;
+    }
+}
+
 export function createModalContainer() {
     const div = document.createElement("div")
     div.id = "modal-container"
@@ -230,7 +312,11 @@ export function createConfirmTxModal(payload: ModalPayload, onResult: (result: M
     function createPoweredByElement(): HTMLDivElement {
         const powered = document.createElement("div")
         powered.className = "wauth-powered"
-        powered.innerHTML = '<a href="https://wauth_subspace.ar.io" target="_blank">powered by wauth</a>'
+
+        // Use secure link creation instead of innerHTML
+        const poweredLink = HTMLSanitizer.createSafeLink("https://wauth_subspace.ar.io", "powered by wauth", "_blank")
+        powered.appendChild(poweredLink)
+
         powered.style.position = "absolute"
         powered.style.bottom = "15px"
         powered.style.textAlign = "center"
@@ -240,11 +326,11 @@ export function createConfirmTxModal(payload: ModalPayload, onResult: (result: M
         powered.style.letterSpacing = "0.02em"
         powered.style.left = "0"
         powered.style.right = "0"
-        const poweredLink = powered.querySelector('a')
-        if (poweredLink) {
-            poweredLink.style.color = "inherit"
-            poweredLink.style.textDecoration = "inherit"
-        }
+
+        // Style the link directly
+        poweredLink.style.color = "inherit"
+        poweredLink.style.textDecoration = "inherit"
+
         return powered
     }
 
@@ -334,8 +420,8 @@ export function createConfirmTxModal(payload: ModalPayload, onResult: (result: M
     favicon.style.borderRadius = "6px"
     favicon.style.filter = "brightness(1.2)"
     favicon.onerror = () => {
-        // Fallback to a nice icon
-        appIcon.innerHTML = "₿"
+        // Fallback to a nice icon - use textContent for safety
+        appIcon.textContent = "₿"
         appIcon.style.fontSize = "20px"
     }
     appIcon.appendChild(favicon)
@@ -344,10 +430,19 @@ export function createConfirmTxModal(payload: ModalPayload, onResult: (result: M
     header.appendChild(appIcon)
     modal.appendChild(header)
 
-    // Enhanced description
+    // Enhanced description - SECURITY: Use safe HTML to prevent XSS
     const desc = document.createElement("div")
     desc.className = "modal-desc"
-    desc.innerHTML = `${window.location.hostname} wants to sign a transaction.<br/>Review the details below.`
+
+    // Create safe description with escaped hostname and proper line break
+    const hostname = HTMLSanitizer.escapeHTML(window.location.hostname);
+    const descText = `${hostname} wants to sign a transaction.`;
+    const reviewText = "Review the details below.";
+
+    desc.appendChild(document.createTextNode(descText));
+    desc.appendChild(document.createElement("br"));
+    desc.appendChild(document.createTextNode(reviewText));
+
     desc.style.fontSize = "0.95rem"
     desc.style.color = "rgba(255, 255, 255, 0.7)"
     desc.style.lineHeight = "1.5"
@@ -658,7 +753,7 @@ export function createConfirmTxModal(payload: ModalPayload, onResult: (result: M
         loadingSpinner.style.marginRight = "8px"
         loadingSpinner.style.verticalAlign = "middle"
 
-        signBtn.innerHTML = ""
+        signBtn.textContent = ""
         signBtn.appendChild(loadingSpinner)
         signBtn.appendChild(document.createTextNode("Loading Token Details..."))
     } else {
