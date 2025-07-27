@@ -1,4 +1,3 @@
-
 import type { ModalTypes, ModalPayload, ModalResult } from "./index";
 
 // Import HTMLSanitizer for safe DOM manipulation
@@ -83,6 +82,62 @@ export class HTMLSanitizer {
     }
 }
 
+// Focus management for accessibility
+let previouslyFocusedElement: HTMLElement | null = null;
+
+function trapFocus(modal: HTMLElement) {
+    const focusableElements = modal.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const firstFocusableElement = focusableElements[0] as HTMLElement;
+    const lastFocusableElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+    function handleTab(e: KeyboardEvent) {
+        if (e.key !== 'Tab') return;
+
+        if (e.shiftKey) {
+            if (document.activeElement === firstFocusableElement) {
+                lastFocusableElement.focus();
+                e.preventDefault();
+            }
+        } else {
+            if (document.activeElement === lastFocusableElement) {
+                firstFocusableElement.focus();
+                e.preventDefault();
+            }
+        }
+    }
+
+    modal.addEventListener('keydown', handleTab);
+    return () => modal.removeEventListener('keydown', handleTab);
+}
+
+function setInitialFocus(modal: HTMLElement) {
+    // Store the previously focused element
+    previouslyFocusedElement = document.activeElement as HTMLElement;
+
+    // Focus on the first input field, or fallback to first button
+    const passwordInput = modal.querySelector('input[type="password"]') as HTMLElement;
+    const firstInput = modal.querySelector('input') as HTMLElement;
+    const firstButton = modal.querySelector('button') as HTMLElement;
+
+    const elementToFocus = passwordInput || firstInput || firstButton;
+
+    if (elementToFocus) {
+        // Use requestAnimationFrame to ensure DOM is ready
+        requestAnimationFrame(() => {
+            elementToFocus.focus();
+        });
+    }
+}
+
+function restoreFocus() {
+    if (previouslyFocusedElement) {
+        previouslyFocusedElement.focus();
+        previouslyFocusedElement = null;
+    }
+}
+
 export function createModalContainer() {
     const div = document.createElement("div")
     div.id = "modal-container"
@@ -103,26 +158,42 @@ export function createModalContainer() {
     div.style.animation = "fadeIn 0.3s ease-out"
     div.style.pointerEvents = "all" // Ensure all pointer events are captured
 
-    // Comprehensive event blocking to prevent any interactions with background elements
-    const preventEvent = (e: Event) => {
-        e.stopPropagation()
-        e.stopImmediatePropagation()
-        e.preventDefault()
+    // Selective event blocking - only prevent interactions with background elements
+    const preventBackgroundInteraction = (e: Event) => {
+        // Only prevent events if clicking directly on the background container
+        if (e.target === div) {
+            e.preventDefault()
+            e.stopPropagation()
+
+            // Add subtle shake animation to indicate modal can't be dismissed by clicking background
+            if (e.type === 'click') {
+                div.style.animation = 'none'
+                div.style.animation = 'modalShake 0.3s ease-in-out'
+                setTimeout(() => {
+                    div.style.animation = 'fadeIn 0.3s ease-out'
+                }, 300)
+            }
+        }
     }
 
-    // Block all types of pointer and mouse events
-    div.addEventListener('click', preventEvent, true)
-    div.addEventListener('mousedown', preventEvent, true)
-    div.addEventListener('mouseup', preventEvent, true)
-    div.addEventListener('mousemove', preventEvent, true)
-    div.addEventListener('pointerdown', preventEvent, true)
-    div.addEventListener('pointerup', preventEvent, true)
-    div.addEventListener('pointermove', preventEvent, true)
-    div.addEventListener('touchstart', preventEvent, true)
-    div.addEventListener('touchend', preventEvent, true)
-    div.addEventListener('touchmove', preventEvent, true)
-    div.addEventListener('wheel', preventEvent, true)
-    div.addEventListener('contextmenu', preventEvent, true)
+    // Only block background clicks and touches, allow other interactions
+    div.addEventListener('click', preventBackgroundInteraction, false)
+    div.addEventListener('touchstart', preventBackgroundInteraction, false)
+
+    // Block scroll on background to prevent page scrolling, but allow modal content scrolling
+    div.addEventListener('wheel', (e: Event) => {
+        const target = e.target as HTMLElement
+        if (target === div || !target.closest('#modal-content')) {
+            e.preventDefault()
+        }
+    }, { passive: false })
+
+    // Prevent context menu only on background
+    div.addEventListener('contextmenu', (e: Event) => {
+        if (e.target === div) {
+            e.preventDefault()
+        }
+    })
 
     // Add fade-in animation
     const style = document.createElement("style")
@@ -141,6 +212,11 @@ export function createModalContainer() {
                 transform: translateY(0) scale(1); 
             }
         }
+        @keyframes modalShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
     `
     if (!document.head.querySelector('style[data-wauth-fade-animations]')) {
         style.setAttribute('data-wauth-fade-animations', 'true')
@@ -151,15 +227,61 @@ export function createModalContainer() {
 }
 
 export function createModal(type: ModalTypes, payload: ModalPayload, onResult: (result: ModalResult) => void): HTMLDivElement {
+    let modal: HTMLDivElement;
+    let cleanupFocus: () => void;
+
+    // Create wrapper that handles cleanup AFTER the original callback
+    const wrappedOnResult = (result: ModalResult) => {
+        console.log("[modal-helper] Modal result received:", { proceed: result.proceed, hasPassword: !!result.password });
+
+        // Call original callback first
+        onResult(result);
+
+        // Then do cleanup after a longer delay to ensure modal removal completes
+        setTimeout(() => {
+            if (cleanupFocus) {
+                console.log("[modal-helper] Cleaning up focus management");
+                cleanupFocus();
+            }
+            restoreFocus();
+        }, 50); // Increased delay
+    };
+
     if (type === "confirm-tx") {
-        return createConfirmTxModal(payload, onResult)
+        modal = createConfirmTxModal(payload, wrappedOnResult)
     } else if (type === "password-new") {
-        return createPasswordNewModal(payload, onResult)
+        modal = createPasswordNewModal(payload, wrappedOnResult)
     } else if (type === "password-existing") {
-        return createPasswordExistingModal(payload, onResult)
+        modal = createPasswordExistingModal(payload, wrappedOnResult)
+    } else {
+        modal = document.createElement("div")
     }
-    // Add more modal types as needed
-    return document.createElement("div")
+
+    // Store setup function to be called after modal is added to DOM
+    (modal as any)._setupFocus = () => {
+        console.log("[modal-helper] Setting up focus management for modal type:", type);
+        setInitialFocus(modal);
+        const trapCleanup = trapFocus(modal);
+
+        // Handle escape key to close modal (for some modal types)
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && type !== 'password-existing' && type !== 'password-new') {
+                console.log("[modal-helper] Escape key pressed, closing modal");
+                // Only allow escape for transaction confirmations, not password modals
+                onResult({ proceed: false });
+            }
+        };
+
+        document.addEventListener('keydown', handleEscape);
+
+        // Store cleanup function
+        cleanupFocus = () => {
+            trapCleanup();
+            document.removeEventListener('keydown', handleEscape);
+        };
+    };
+
+    return modal;
 }
 
 export function createConfirmTxModal(payload: ModalPayload, onResult: (result: ModalResult) => void): HTMLDivElement {
@@ -360,24 +482,27 @@ export function createConfirmTxModal(payload: ModalPayload, onResult: (result: M
         return powered
     }
 
-    // Modal card (content only, container handled by index.ts)
+    // Modal card (content only, container handled by index.ts) - Responsive design
     const modal = document.createElement("div")
     modal.id = "modal-content"
     modal.style.background = "linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%)"
-    modal.style.padding = "10px"
-    modal.style.width = "400px"
-    modal.style.maxWidth = "90vw"
-    modal.style.maxHeight = "85vh"
+    modal.style.padding = "clamp(10px, 4vw, 20px)" // Responsive padding
+    modal.style.width = "min(400px, calc(100vw - 32px))" // Responsive width with proper margins
+    modal.style.maxHeight = "calc(100vh - 32px)" // Account for margins on both sides
     modal.style.overflowY = "auto"
-    modal.style.borderRadius = "20px"
+    modal.style.borderRadius = "clamp(12px, 3vw, 20px)" // Responsive border radius
     modal.style.border = "1px solid rgba(255, 255, 255, 0.1)"
     modal.style.boxShadow = "0 20px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05)"
     modal.style.position = "relative"
     modal.style.display = "flex"
     modal.style.flexDirection = "column"
-    modal.style.gap = "10px"
+    modal.style.gap = "clamp(8px, 2vw, 12px)" // Responsive gap
     modal.style.animation = "slideUp 0.4s ease-out"
     modal.style.backdropFilter = "blur(20px)"
+    modal.setAttribute('role', 'dialog') // Accessibility
+    modal.setAttribute('aria-modal', 'true') // Accessibility
+    modal.setAttribute('aria-labelledby', 'modal-title') // Link to title
+    modal.setAttribute('aria-describedby', 'modal-description') // Link to description
 
     // Add custom scrollbar styling
     const scrollbarStyle = document.createElement("style")
@@ -416,6 +541,7 @@ export function createConfirmTxModal(payload: ModalPayload, onResult: (result: M
 
     const title = document.createElement("div")
     title.className = "modal-title"
+    title.id = "modal-title" // For aria-labelledby
     title.textContent = "Transfer"
     title.style.fontSize = "2rem"
     title.style.fontWeight = "700"
@@ -459,6 +585,7 @@ export function createConfirmTxModal(payload: ModalPayload, onResult: (result: M
     // Enhanced description - SECURITY: Use safe HTML to prevent XSS
     const desc = document.createElement("div")
     desc.className = "modal-desc"
+    desc.id = "modal-description" // For aria-describedby
 
     // Create safe description with escaped hostname and proper line break
     const hostname = HTMLSanitizer.escapeHTML(window.location.hostname);
@@ -747,6 +874,8 @@ export function createConfirmTxModal(payload: ModalPayload, onResult: (result: M
     const signBtn = document.createElement("button")
     signBtn.className = "modal-btn modal-btn-primary"
     signBtn.textContent = "Sign Transaction"
+    signBtn.setAttribute('aria-describedby', 'modal-description') // Accessibility
+    signBtn.setAttribute('aria-disabled', isLoading ? 'true' : 'false') // Accessibility
     signBtn.style.width = "100%"
     signBtn.style.padding = "14px 0"
     signBtn.style.border = "none"
@@ -764,9 +893,9 @@ export function createConfirmTxModal(payload: ModalPayload, onResult: (result: M
         signBtn.style.background = "rgba(108, 99, 255, 0.3)"
         signBtn.style.color = "rgba(255, 255, 255, 0.5)"
         signBtn.style.boxShadow = "none"
-        signBtn.textContent = "Loading Token Details..."
+        signBtn.setAttribute('aria-label', 'Loading token details, please wait') // Better accessibility
 
-        // Add loading animation
+        // Add loading animation with better UX
         signBtn.style.position = "relative"
         const loadingSpinner = document.createElement("div")
         loadingSpinner.style.width = "16px"
@@ -778,10 +907,22 @@ export function createConfirmTxModal(payload: ModalPayload, onResult: (result: M
         loadingSpinner.style.display = "inline-block"
         loadingSpinner.style.marginRight = "8px"
         loadingSpinner.style.verticalAlign = "middle"
+        loadingSpinner.setAttribute('aria-hidden', 'true') // Hide from screen readers
 
         signBtn.textContent = ""
         signBtn.appendChild(loadingSpinner)
         signBtn.appendChild(document.createTextNode("Loading Token Details..."))
+
+        // Add timeout fallback for loading state
+        setTimeout(() => {
+            if (signBtn.disabled) {
+                signBtn.textContent = "Continue without token details"
+                signBtn.disabled = false
+                signBtn.style.background = "rgba(108, 99, 255, 0.6)"
+                signBtn.style.color = "rgba(255, 255, 255, 0.8)"
+                signBtn.setAttribute('aria-label', 'Token details could not be loaded, but you can still proceed with the transaction')
+            }
+        }, 10000) // 10 second timeout
     } else {
         signBtn.style.background = "linear-gradient(135deg, #6c63ff 0%, #8b7fff 100%)"
         signBtn.style.color = "#fff"
@@ -835,7 +976,13 @@ export function createConfirmTxModal(payload: ModalPayload, onResult: (result: M
         cancelBtn.style.color = "rgba(255, 255, 255, 0.8)"
         cancelBtn.style.borderColor = "rgba(255, 255, 255, 0.2)"
     }
-    cancelBtn.onclick = () => onResult({ proceed: false })
+    cancelBtn.onclick = () => {
+        console.log("[modal-helper] Cancel button clicked");
+        onResult({ proceed: false })
+    }
+    cancelBtn.onmouseup = (e) => {
+        e.stopPropagation()
+    }
     actions.appendChild(cancelBtn)
 
     modal.appendChild(actions)
@@ -845,44 +992,29 @@ export function createConfirmTxModal(payload: ModalPayload, onResult: (result: M
 }
 
 export function createPasswordNewModal(payload: ModalPayload, onResult: (result: ModalResult) => void): HTMLDivElement {
-    // Modal card (content only, container handled by index.ts)
+    // Modal card (content only, container handled by index.ts) - Responsive design
     const modal = document.createElement("div")
     modal.id = "modal-content"
     modal.style.background = "linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%)"
-    modal.style.padding = "20px"
-    modal.style.width = "400px"
-    modal.style.maxWidth = "90vw"
-    modal.style.maxHeight = "85vh"
+    modal.style.padding = "clamp(16px, 5vw, 24px)" // Responsive padding
+    modal.style.width = "min(400px, calc(100vw - 32px))" // Responsive width with proper margins
+    modal.style.maxHeight = "calc(100vh - 32px)" // Account for margins on both sides
     modal.style.overflowY = "auto"
-    modal.style.borderRadius = "20px"
+    modal.style.borderRadius = "clamp(12px, 3vw, 20px)" // Responsive border radius
     modal.style.border = "1px solid rgba(255, 255, 255, 0.1)"
     modal.style.boxShadow = "0 20px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05)"
     modal.style.position = "relative"
     modal.style.display = "flex"
     modal.style.flexDirection = "column"
-    modal.style.gap = "20px"
+    modal.style.gap = "clamp(16px, 4vw, 24px)" // Responsive gap
     modal.style.animation = "slideUp 0.4s ease-out"
     modal.style.backdropFilter = "blur(20px)"
     modal.style.pointerEvents = "auto" // Ensure modal content is interactive
+    modal.setAttribute('role', 'dialog') // Accessibility
+    modal.setAttribute('aria-modal', 'true') // Accessibility
 
-    // Allow interactions within modal content but prevent bubbling
-    // Don't interfere with input field interactions
-    const allowModalEvent = (e: Event) => {
-        // Don't stop propagation for input-related events
-        const target = e.target as HTMLElement
-        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.tagName === 'BUTTON')) {
-            return
-        }
-        e.stopPropagation()
-    }
-
-    modal.addEventListener('click', allowModalEvent, true)
-    modal.addEventListener('mousedown', allowModalEvent, true)
-    modal.addEventListener('mouseup', allowModalEvent, true)
-    modal.addEventListener('pointerdown', allowModalEvent, true)
-    modal.addEventListener('pointerup', allowModalEvent, true)
-    modal.addEventListener('touchstart', allowModalEvent, true)
-    modal.addEventListener('touchend', allowModalEvent, true)
+    // Remove problematic event listeners that interfere with button clicks
+    // These were preventing proper button interactions
 
     // Header
     const header = document.createElement("div")
@@ -1000,7 +1132,7 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
     passwordInput.placeholder = "Enter your master password"
     passwordInput.required = true // Required for password manager detection
     passwordInput.minLength = 8 // Helps password managers understand requirements
-    passwordInput.autofocus = true // Auto-focus for better UX
+    // Auto-focus handled by focus management system
     passwordInput.style.padding = "12px 16px"
     passwordInput.style.borderRadius = "8px"
     passwordInput.style.border = "1px solid rgba(255, 255, 255, 0.2)"
@@ -1207,15 +1339,23 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
         cancelBtn.style.color = "rgba(255, 255, 255, 0.8)"
         cancelBtn.style.borderColor = "rgba(255, 255, 255, 0.2)"
     }
-    cancelBtn.onclick = () => onResult({ proceed: false })
+    cancelBtn.onclick = () => {
+        console.log("[modal-helper] Cancel button clicked");
+        onResult({ proceed: false })
+    }
+    cancelBtn.onmouseup = (e) => {
+        e.stopPropagation()
+    }
 
     // Handle form submission and Enter key
     const handleSubmit = (event?: Event) => {
+        console.log("[modal-helper] New password modal handleSubmit called");
         const password = passwordInput.value
         const confirmPassword = confirmInput.value
 
         // Validation
         if (!password) {
+            console.log("[modal-helper] Validation failed: Password is required");
             errorMessage.textContent = "Password is required"
             errorMessage.style.display = "block"
             passwordInput.focus()
@@ -1223,6 +1363,7 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
         }
 
         if (password.length < 8) {
+            console.log("[modal-helper] Validation failed: Password too short");
             errorMessage.textContent = "Password must be at least 8 characters long"
             errorMessage.style.display = "block"
             passwordInput.focus()
@@ -1230,6 +1371,7 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
         }
 
         if (!checkPasswordStrength(password)) {
+            console.log("[modal-helper] Validation failed: Password too weak");
             errorMessage.textContent = "Password is too weak. Please use a stronger password."
             errorMessage.style.display = "block"
             passwordInput.focus()
@@ -1237,28 +1379,36 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
         }
 
         if (password !== confirmPassword) {
+            console.log("[modal-helper] Validation failed: Passwords do not match");
             errorMessage.textContent = "Passwords do not match"
             errorMessage.style.display = "block"
             confirmInput.focus()
             return false
         }
 
-        // For password managers to work, always trigger the result with a delay
-        // This allows password managers to detect the successful form submission
-        setTimeout(() => {
-            onResult({ proceed: true, password })
-        }, 150) // Delay to let password managers detect the submission
+        console.log("[modal-helper] New password validation passed, calling onResult");
+        // Trigger result immediately - form element and proper autocomplete attributes 
+        // are sufficient for password manager detection
+        onResult({ proceed: true, password })
 
         return true
     }
 
-    // Set button and form handlers - need both for click and submit to work
+    // Improved button handlers with better event handling
     createBtn.onclick = (e) => {
+        console.log("[modal-helper] Create button clicked");
         e.preventDefault()
+        e.stopPropagation()
         handleSubmit(e)
     }
 
+    // Also handle mouse events to ensure clicks work
+    createBtn.onmouseup = (e) => {
+        e.stopPropagation()
+    }
+
     form.onsubmit = (e) => {
+        console.log("[modal-helper] Form submitted");
         e.preventDefault()
         handleSubmit(e)
     }
@@ -1268,11 +1418,11 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
 
     modal.appendChild(actions)
 
-    // Focus on first input
-    setTimeout(() => passwordInput.focus(), 100)
+    // Focus handled by focus management system
 
     const handleEnter = (e: KeyboardEvent) => {
         if (e.key === "Enter") {
+            console.log("[modal-helper] Enter key pressed in new password modal");
             e.preventDefault()
             handleSubmit()
         }
@@ -1284,44 +1434,29 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
 }
 
 export function createPasswordExistingModal(payload: ModalPayload, onResult: (result: ModalResult) => void): HTMLDivElement {
-    // Modal card (content only, container handled by index.ts)
+    // Modal card (content only, container handled by index.ts) - Responsive design
     const modal = document.createElement("div")
     modal.id = "modal-content"
     modal.style.background = "linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%)"
-    modal.style.padding = "20px"
-    modal.style.width = "400px"
-    modal.style.maxWidth = "90vw"
-    modal.style.maxHeight = "85vh"
+    modal.style.padding = "clamp(16px, 5vw, 24px)" // Responsive padding
+    modal.style.width = "min(400px, calc(100vw - 32px))" // Responsive width with proper margins
+    modal.style.maxHeight = "calc(100vh - 32px)" // Account for margins on both sides
     modal.style.overflowY = "auto"
-    modal.style.borderRadius = "20px"
+    modal.style.borderRadius = "clamp(12px, 3vw, 20px)" // Responsive border radius
     modal.style.border = "1px solid rgba(255, 255, 255, 0.1)"
     modal.style.boxShadow = "0 20px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05)"
     modal.style.position = "relative"
     modal.style.display = "flex"
     modal.style.flexDirection = "column"
-    modal.style.gap = "20px"
+    modal.style.gap = "clamp(16px, 4vw, 24px)" // Responsive gap
     modal.style.animation = "slideUp 0.4s ease-out"
     modal.style.backdropFilter = "blur(20px)"
     modal.style.pointerEvents = "auto" // Ensure modal content is interactive
+    modal.setAttribute('role', 'dialog') // Accessibility
+    modal.setAttribute('aria-modal', 'true') // Accessibility
 
-    // Allow interactions within modal content but prevent bubbling
-    // Don't interfere with input field interactions
-    const allowModalEvent = (e: Event) => {
-        // Don't stop propagation for input-related events
-        const target = e.target as HTMLElement
-        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.tagName === 'BUTTON')) {
-            return
-        }
-        e.stopPropagation()
-    }
-
-    modal.addEventListener('click', allowModalEvent, true)
-    modal.addEventListener('mousedown', allowModalEvent, true)
-    modal.addEventListener('mouseup', allowModalEvent, true)
-    modal.addEventListener('pointerdown', allowModalEvent, true)
-    modal.addEventListener('pointerup', allowModalEvent, true)
-    modal.addEventListener('touchstart', allowModalEvent, true)
-    modal.addEventListener('touchend', allowModalEvent, true)
+    // Remove problematic event listeners that interfere with button clicks
+    // These were preventing proper button interactions
 
     // Header
     const header = document.createElement("div")
@@ -1440,7 +1575,7 @@ export function createPasswordExistingModal(payload: ModalPayload, onResult: (re
     passwordInput.autocomplete = "current-password"
     passwordInput.placeholder = "Enter your master password"
     passwordInput.required = true // Required for password manager detection
-    passwordInput.autofocus = true // Auto-focus for better UX
+    // Auto-focus handled by focus management system
     passwordInput.style.padding = "12px 16px"
     passwordInput.style.borderRadius = "8px"
     passwordInput.style.border = "1px solid rgba(255, 255, 255, 0.2)"
@@ -1553,49 +1688,67 @@ export function createPasswordExistingModal(payload: ModalPayload, onResult: (re
         cancelBtn.style.color = "rgba(255, 255, 255, 0.8)"
         cancelBtn.style.borderColor = "rgba(255, 255, 255, 0.2)"
     }
-    cancelBtn.onclick = () => onResult({ proceed: false })
+    cancelBtn.onclick = () => {
+        console.log("[modal-helper] Cancel button clicked");
+        onResult({ proceed: false })
+    }
+    cancelBtn.onmouseup = (e) => {
+        e.stopPropagation()
+    }
     actions.appendChild(cancelBtn)
 
     modal.appendChild(actions)
 
     // Handle form submission and Enter key
     const handleSubmit = (event?: Event) => {
+        console.log("[modal-helper] Existing password modal handleSubmit called");
         const password = passwordInput.value
 
         // Validation
         if (!password) {
+            console.log("[modal-helper] Validation failed: Password is required");
             errorMessage.textContent = "Password is required"
             errorMessage.style.display = "block"
             passwordInput.focus()
             return false
         }
 
-        // For password managers to work, always trigger the result with a delay
-        // This allows password managers to detect the successful form submission
-        setTimeout(() => {
-            onResult({ proceed: true, password })
-        }, 150) // Delay to let password managers detect the submission
+        console.log("[modal-helper] Existing password validation passed, calling onResult");
+        // NOTE: Backend verification happens in the caller (index.ts), not here
+        // This modal just collects the password and returns it
+        onResult({ proceed: true, password })
 
         return true
     }
 
-    // Set button and form handlers - need both for click and submit to work
+    // Improved button handlers with better event handling
     unlockBtn.onclick = (e) => {
+        console.log("[modal-helper] Unlock button clicked");
         e.preventDefault()
+        e.stopPropagation()
         handleSubmit(e)
+    }
+
+    // Also handle mouse events to ensure clicks work
+    unlockBtn.onmouseup = (e) => {
+        e.stopPropagation()
     }
 
     form.onsubmit = (e) => {
+        console.log("[modal-helper] Form submitted");
         e.preventDefault()
         handleSubmit(e)
     }
 
-    // Focus on password input
-    setTimeout(() => passwordInput.focus(), 100)
+    actions.appendChild(unlockBtn)
+    actions.appendChild(cancelBtn)
+
+    modal.appendChild(actions)
 
     // Handle Enter key
     const handleEnter = (e: KeyboardEvent) => {
         if (e.key === "Enter") {
+            console.log("[modal-helper] Enter key pressed in existing password modal");
             e.preventDefault()
             handleSubmit()
         }

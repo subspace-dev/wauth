@@ -62,6 +62,7 @@ export class WAuth {
     private authDataListeners: ((data: any) => void)[] = [];
     private sessionPassword: string | null = null; // Store decrypted password in memory only
     private sessionKey: CryptoKey | null = null; // Key for local session encryption
+    private sessionPasswordLoading: boolean = false; // Prevent multiple simultaneous loading attempts
 
     private async initializeSessionKey(): Promise<CryptoKey> {
         if (this.sessionKey) return this.sessionKey;
@@ -129,6 +130,15 @@ export class WAuth {
         }
     }
 
+    public hasSessionStorageData(): boolean {
+        if (typeof window === 'undefined') return false;
+
+        const hasEncryptedPassword = sessionStorage.getItem('wauth_encrypted_password') !== null;
+        const hasSessionKey = sessionStorage.getItem('wauth_session_key') !== null;
+
+        return hasEncryptedPassword && hasSessionKey;
+    }
+
     private async loadPasswordFromSession(): Promise<string | null> {
         if (typeof window === 'undefined') return null;
 
@@ -164,7 +174,7 @@ export class WAuth {
         this.sessionKey = null;
     }
 
-    private clearAllAuthData(): void {
+    private clearAllAuthData(clearLocalStorage: boolean = true): void {
         // Clear session password and storage
         this.clearSessionPassword();
 
@@ -172,9 +182,9 @@ export class WAuth {
         this.pb.authStore.clear();
 
         // Clear additional localStorage items if any
-        if (typeof window !== 'undefined') {
+        if (typeof window !== 'undefined' && clearLocalStorage) {
             // Clear any PocketBase auth data from localStorage
-            localStorage.removeItem('pocketbase_auth');
+            // localStorage.removeItem('pocketbase_auth');
             // Clear any other wauth-related items
             Object.keys(localStorage).forEach(key => {
                 if (key.startsWith('wauth_')) {
@@ -191,6 +201,25 @@ export class WAuth {
         console.log("[wauth] Cleared all authentication data");
     }
 
+    // Method to check if backend is accessible
+    private async isBackendAccessible(): Promise<boolean> {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+            const response = await fetch(`${this.backendUrl}/`, {
+                method: 'HEAD',
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+            return response.ok;
+        } catch (error) {
+            console.warn("[wauth] Backend accessibility check failed:", error);
+            return false;
+        }
+    }
+
     constructor({ dev = false, url, backendUrl }: { dev?: boolean, url?: string, backendUrl?: string }) {
         this.pb = new PocketBase(url || (dev ? WAuth.devUrl : WAuth.prodUrl));
         this.backendUrl = backendUrl || (dev ? WAuth.devBackendUrl : WAuth.prodBackendUrl);
@@ -200,8 +229,34 @@ export class WAuth {
         this.sessionPassword = null;
         this.sessionKey = null;
 
-        // Load password from session storage on initialization
+        // Ensure PocketBase auth state is properly restored
         if (typeof window !== 'undefined') {
+            // Check if there's existing PocketBase auth data in localStorage
+            const existingAuth = localStorage.getItem('pocketbase_auth');
+            console.log("[wauth] Constructor - checking for existing auth:", !!existingAuth);
+            if (existingAuth) {
+                try {
+                    // Try to restore the auth state
+                    const authData = JSON.parse(existingAuth);
+                    if (authData && authData.token && authData.model) {
+                        // Set the auth data in PocketBase
+                        this.pb.authStore.save(authData.token, authData.model);
+                        console.log("[wauth] Restored PocketBase authentication state");
+                    } else {
+                        console.log("[wauth] Existing auth data found but invalid format");
+                    }
+                } catch (error) {
+                    console.warn("[wauth] Failed to restore PocketBase auth state:", error);
+                    // Don't clear the auth data on parse error, let PocketBase handle it
+                }
+            } else {
+                console.log("[wauth] No existing PocketBase auth data found");
+            }
+        }
+
+        // Load password from session storage on initialization
+        if (typeof window !== 'undefined' && this.hasSessionStorageData()) {
+            this.sessionPasswordLoading = true;
             this.loadPasswordFromSession().then(async password => {
                 if (password) {
                     this.sessionPassword = password;
@@ -214,15 +269,14 @@ export class WAuth {
                         }
                     }
                 }
+                this.sessionPasswordLoading = false;
             }).catch(error => {
                 console.error("Failed to load session password:", error);
+                this.sessionPasswordLoading = false;
             });
         }
 
         this.pb.authStore.onChange(async (token, record) => {
-            if (!record || !localStorage.getItem("pocketbase_auth")) {
-                return
-            }
             this.authRecord = record;
             this.authData = this.getAuthData();
 
@@ -296,16 +350,45 @@ export class WAuth {
         // Encrypt session password for backend
         if (!this.sessionPassword) {
             // Ask for the password again instead of throwing an error
-            const result = await new Promise<ModalResult>((resolve) => {
-                this.createModal("password-existing", { errorMessage: "Session expired. Please enter your password again." }, resolve);
-            });
+            console.log("[wauth] runAction(): Session password not available, asking user");
+            let passwordResult: ModalResult;
+            let attempts = 0;
+            const maxAttempts = 3;
+            let errorMessage = "Session expired. Please enter your password again.";
 
-            if (!result.proceed || !result.password) {
-                throw new Error("[wauth] Password required to continue");
-            }
+            do {
+                console.log(`[wauth] runAction(): Showing password modal (attempt ${attempts + 1}/${maxAttempts})`);
+                passwordResult = await new Promise<ModalResult>((resolve) => {
+                    this.createModal("password-existing", { errorMessage }, resolve);
+                });
 
-            this.sessionPassword = result.password;
-            await this.storePasswordInSession(result.password);
+                if (!passwordResult.proceed || !passwordResult.password) {
+                    console.log("[wauth] runAction(): User cancelled password entry");
+                    throw new Error("[wauth] Password required to continue");
+                }
+
+                // CRITICAL: Verify password with backend
+                console.log(`[wauth] runAction(): Verifying password with backend (attempt ${attempts + 1}/${maxAttempts})`);
+                const isValidPassword = await this.verifyPassword(passwordResult.password);
+                if (isValidPassword) {
+                    console.log("[wauth] runAction(): Password verification PASSED");
+                    break; // Password is valid, exit loop
+                } else {
+                    console.error(`[wauth] runAction(): Password verification FAILED (attempt ${attempts + 1}/${maxAttempts})`);
+                }
+
+                attempts++;
+                if (attempts >= maxAttempts) {
+                    throw new Error("Too many failed password attempts. Please try again later.");
+                }
+
+                // Set error message for next modal display
+                errorMessage = `Invalid password. Please try again. (${maxAttempts - attempts} attempts remaining)`;
+            } while (attempts < maxAttempts);
+
+            console.log("[wauth] runAction(): Storing verified password in session");
+            this.sessionPassword = passwordResult.password;
+            await this.storePasswordInSession(passwordResult.password);
         }
 
         const encryptedPassword = await PasswordEncryption.encryptPassword(this.sessionPassword, this.backendUrl);
@@ -399,6 +482,14 @@ export class WAuth {
 
         document.body.appendChild(container)
 
+        // Set up focus management after modal is fully added to DOM
+        if ((modal as any)._setupFocus) {
+            // Use requestAnimationFrame to ensure modal is fully rendered
+            requestAnimationFrame(() => {
+                (modal as any)._setupFocus();
+            });
+        }
+
         // Now fetch token details asynchronously and update the modal
         if (type === "confirm-tx") {
             const data = payload.transaction || payload.dataItem
@@ -419,6 +510,13 @@ export class WAuth {
 
                     // Replace the existing modal content (keep powered by element)
                     container.replaceChild(updatedModal, modal)
+
+                    // Set up focus management for the updated modal
+                    if ((updatedModal as any)._setupFocus) {
+                        requestAnimationFrame(() => {
+                            (updatedModal as any)._setupFocus();
+                        });
+                    }
 
                 } catch (error) {
                     console.warn("[wauth] Failed to fetch token details:", error)
@@ -463,36 +561,74 @@ export class WAuth {
                 // Existing user - ask for password to decrypt wallet using modal
                 let passwordResult: ModalResult;
                 let attempts = 0;
-                const maxAttempts = 3;
+                const maxAttempts = 5; // More forgiving attempt limit
                 let errorMessage = "";
 
                 do {
+                    // Progressive delay based on attempts (exponential backoff)
+                    if (attempts > 0) {
+                        const delayMs = Math.min(attempts * 1000, 10000); // Max 10 second delay
+                        if (delayMs > 0) {
+                            const delaySeconds = Math.ceil(delayMs / 1000);
+                            errorMessage = `Too many failed attempts. Please wait ${delaySeconds} second${delaySeconds > 1 ? 's' : ''} before trying again.`;
+
+                            // Show countdown in modal
+                            const countdownResult = await new Promise<ModalResult>((resolve) => {
+                                this.createModal("password-existing", { errorMessage }, resolve);
+                            });
+
+                            if (!countdownResult.proceed) {
+                                this.clearAllAuthData(false);
+                                throw new Error("Password required to access existing wallet");
+                            }
+
+                            // Wait for the delay period
+                            await new Promise(resolve => setTimeout(resolve, delayMs));
+                        }
+                    }
+
+                    console.log(`[wauth] connect(): Showing password modal (attempt ${attempts + 1}/${maxAttempts})`);
                     passwordResult = await new Promise<ModalResult>((resolve) => {
                         this.createModal("password-existing", { errorMessage }, resolve);
                     });
 
                     if (!passwordResult.proceed || !passwordResult.password) {
-                        // User cancelled - clear all authentication data
-                        this.clearAllAuthData();
+                        console.log("[wauth] connect(): User cancelled password entry");
+                        // User cancelled - clear session data but keep PocketBase auth
+                        this.clearAllAuthData(false);
                         throw new Error("Password required to access existing wallet");
                     }
 
-                    // Verify password before storing it
+                    // CRITICAL: Verify password before storing it
+                    console.log(`[wauth] connect(): Attempting password verification (attempt ${attempts + 1}/${maxAttempts})`);
                     const isValidPassword = await this.verifyPassword(passwordResult.password);
                     if (isValidPassword) {
+                        console.log("[wauth] connect(): Password verification PASSED");
                         break; // Password is valid, exit loop
+                    } else {
+                        console.error(`[wauth] connect(): Password verification FAILED (attempt ${attempts + 1}/${maxAttempts})`);
                     }
 
                     attempts++;
                     if (attempts >= maxAttempts) {
-                        throw new Error("Too many failed password attempts. Please try again later.");
+                        const lockoutMinutes = 5;
+                        errorMessage = `Too many failed password attempts. Account temporarily locked for ${lockoutMinutes} minutes. Please check your password manager or contact support if this continues.`;
+
+                        // Show final lockout message
+                        await new Promise<ModalResult>((resolve) => {
+                            this.createModal("password-existing", { errorMessage }, resolve);
+                        });
+
+                        throw new Error(`Too many failed password attempts. Account temporarily locked for ${lockoutMinutes} minutes.`);
                     }
 
-                    // Set error message for next modal display
-                    errorMessage = `Invalid password. Please try again. (${maxAttempts - attempts} attempts remaining)`;
+                    // Set error message for next modal display with helpful context
+                    const remainingAttempts = maxAttempts - attempts;
+                    errorMessage = `Invalid password. Please check your password manager or try a different password. ${remainingAttempts} attempt${remainingAttempts > 1 ? 's' : ''} remaining.`;
                 } while (attempts < maxAttempts);
 
-                // Store password in session for future use
+                // Store password in session for future use - password is already verified above
+                console.log("[wauth] connect(): Storing verified password in session");
                 this.sessionPassword = passwordResult.password;
                 await this.storePasswordInSession(passwordResult.password);
 
@@ -500,17 +636,20 @@ export class WAuth {
                 this.wallet = await this.getWallet();
             } else {
                 // New user - ask for password to create wallet using modal
+                console.log("[wauth] connect(): New user detected, asking for password to create wallet");
                 const result = await new Promise<ModalResult>((resolve) => {
                     this.createModal("password-new", {}, resolve);
                 });
 
                 if (!result.proceed || !result.password) {
-                    // User cancelled - clear all authentication data
-                    this.clearAllAuthData();
+                    console.log("[wauth] connect(): User cancelled new password creation");
+                    // User cancelled - clear session data but keep PocketBase auth
+                    this.clearAllAuthData(false);
                     throw new Error("Password required to create wallet");
                 }
 
-                // Store password in session
+                console.log("[wauth] connect(): New password created, storing in session (no verification needed for new passwords)");
+                // Store password in session - new passwords don't need backend verification since no wallet exists yet
                 this.sessionPassword = result.password;
                 await this.storePasswordInSession(result.password);
 
@@ -524,8 +663,15 @@ export class WAuth {
             }
         } catch (e) {
             console.error("[wauth]", e)
-            // Clear all authentication data on error
-            this.clearAllAuthData();
+            // Clear all authentication data on error, but be more selective about localStorage
+            // Only clear localStorage if it's a critical error that invalidates the auth
+            const errorMessage = e instanceof Error ? e.message : String(e);
+            const shouldClearLocalStorage = !!errorMessage && (
+                errorMessage.includes("Token is expired") ||
+                errorMessage.includes("authentication failed") ||
+                errorMessage.includes("invalid token")
+            );
+            this.clearAllAuthData(shouldClearLocalStorage);
             throw e;
         }
 
@@ -555,8 +701,16 @@ export class WAuth {
 
     private async verifyPassword(password: string): Promise<boolean> {
         try {
+            console.log("[wauth] Starting password verification with backend");
+            // First check if we're logged in
+            if (!this.isLoggedIn()) {
+                console.error("[wauth] Cannot verify password: not logged in");
+                return false;
+            }
+
             // Encrypt password for backend
             const encryptedPassword = await PasswordEncryption.encryptPassword(password, this.backendUrl);
+            console.log("[wauth] Password encrypted for backend verification");
 
             // Call verification endpoint
             const response = await fetch(`${this.backendUrl}/verify-password`, {
@@ -569,15 +723,34 @@ export class WAuth {
             });
 
             if (!response.ok) {
+                console.error(`[wauth] Password verification failed with status: ${response.status}`);
                 return false;
             }
 
             const result = await response.json();
-            return result.valid === true;
+            const isValid = result.valid === true;
+            console.log("[wauth] Password verification result:", isValid ? "VALID" : "INVALID");
+            return isValid;
         } catch (error) {
-            console.error("Password verification failed:", error);
+            console.error("[wauth] Password verification failed:", error);
             return false;
         }
+    }
+
+    // Enhanced password verification helper with debugging
+    private async verifyAndStorePassword(password: string, context: string): Promise<boolean> {
+        console.log(`[wauth] ${context}: Verifying password with backend before storing`);
+
+        const isValidPassword = await this.verifyPassword(password);
+        if (!isValidPassword) {
+            console.error(`[wauth] ${context}: Password verification FAILED - will not store invalid password`);
+            return false;
+        }
+
+        console.log(`[wauth] ${context}: Password verification PASSED - storing in session`);
+        this.sessionPassword = password;
+        await this.storePasswordInSession(password);
+        return true;
     }
 
     public async addConnectedWallet(address: string, pkey: string, signature: string) {
@@ -601,7 +774,9 @@ export class WAuth {
     }
 
     public isLoggedIn() {
-        return this.pb.authStore.isValid;
+        const isValid = this.pb.authStore.isValid;
+        console.log("[wauth] isLoggedIn check:", isValid, "token:", !!this.pb.authStore.token, "record:", !!this.pb.authStore.record);
+        return isValid;
     }
 
     public async getActiveAddress(): Promise<string> {
@@ -646,24 +821,140 @@ export class WAuth {
         return this.pb.authStore.token
     }
 
-    public async getWallet() {
+    public async getWallet(showPasswordModal: boolean = true) {
         if (!this.isLoggedIn()) {
             return null;
         }
 
-        if (!this.sessionPassword) {
-            // throw new Error("Session password not available - please reconnect");
-            // ask for the password again
-            const result = await new Promise<ModalResult>((resolve) => {
-                this.createModal("password-existing", { errorMessage: "Session expired. Please enter your password again." }, resolve);
-            });
+        // Wait for session password to be loaded if it's not available yet
+        if (!this.sessionPassword && !this.sessionPasswordLoading) {
+            this.sessionPasswordLoading = true;
+            try {
+                // Check if session storage data exists first
+                if (this.hasSessionStorageData()) {
+                    // Try to load from session storage
+                    const sessionPassword = await this.loadPasswordFromSession();
+                    if (sessionPassword) {
+                        this.sessionPassword = sessionPassword;
+                        console.log("[wauth] Session password loaded from storage");
+                    } else {
+                        // Session storage data exists but failed to decrypt
+                        console.warn("[wauth] Failed to decrypt session password, clearing storage");
+                        this.clearSessionPassword();
 
-            if (!result.proceed || !result.password) {
-                throw new Error("[wauth] Password required to access wallet");
+                        // Only show modal if explicitly requested
+                        if (showPasswordModal) {
+                            let passwordResult: ModalResult;
+                            let attempts = 0;
+                            const maxAttempts = 3;
+                            let errorMessage = "Session expired. Please enter your password again.";
+
+                            do {
+                                console.log(`[wauth] getWallet(): Showing password modal for session expired (attempt ${attempts + 1}/${maxAttempts})`);
+                                passwordResult = await new Promise<ModalResult>((resolve) => {
+                                    this.createModal("password-existing", { errorMessage }, resolve);
+                                });
+
+                                if (!passwordResult.proceed || !passwordResult.password) {
+                                    console.log("[wauth] getWallet(): User cancelled password entry");
+                                    throw new Error("[wauth] Password required to access wallet");
+                                }
+
+                                // CRITICAL: Verify password with backend
+                                console.log(`[wauth] getWallet(): Verifying password with backend (attempt ${attempts + 1}/${maxAttempts})`);
+                                const isValidPassword = await this.verifyPassword(passwordResult.password);
+                                if (isValidPassword) {
+                                    console.log("[wauth] getWallet(): Password verification PASSED");
+                                    break; // Password is valid, exit loop
+                                } else {
+                                    console.error(`[wauth] getWallet(): Password verification FAILED (attempt ${attempts + 1}/${maxAttempts})`);
+                                }
+
+                                attempts++;
+                                if (attempts >= maxAttempts) {
+                                    throw new Error("Too many failed password attempts. Please try again later.");
+                                }
+
+                                // Set error message for next modal display
+                                errorMessage = `Invalid password. Please try again. (${maxAttempts - attempts} attempts remaining)`;
+                            } while (attempts < maxAttempts);
+
+                            console.log("[wauth] getWallet(): Storing verified password in session");
+                            this.sessionPassword = passwordResult.password;
+                            await this.storePasswordInSession(passwordResult.password);
+                        } else {
+                            // Don't show modal, just return null
+                            console.log("[wauth] Session password unavailable, not showing modal");
+                            this.sessionPasswordLoading = false;
+                            return null;
+                        }
+                    }
+                } else {
+                    // No session storage data exists
+                    console.log("[wauth] getWallet(): No session storage data found");
+                    if (showPasswordModal) {
+                        let passwordResult: ModalResult;
+                        let attempts = 0;
+                        const maxAttempts = 3;
+                        let errorMessage = "Please enter your password to access your wallet.";
+
+                        do {
+                            console.log(`[wauth] getWallet(): Showing password modal for no session data (attempt ${attempts + 1}/${maxAttempts})`);
+                            passwordResult = await new Promise<ModalResult>((resolve) => {
+                                this.createModal("password-existing", { errorMessage }, resolve);
+                            });
+
+                            if (!passwordResult.proceed || !passwordResult.password) {
+                                console.log("[wauth] getWallet(): User cancelled password entry");
+                                throw new Error("[wauth] Password required to access wallet");
+                            }
+
+                            // CRITICAL: Verify password with backend
+                            console.log(`[wauth] getWallet(): Verifying password with backend (attempt ${attempts + 1}/${maxAttempts})`);
+                            const isValidPassword = await this.verifyPassword(passwordResult.password);
+                            if (isValidPassword) {
+                                console.log("[wauth] getWallet(): Password verification PASSED");
+                                break; // Password is valid, exit loop
+                            } else {
+                                console.error(`[wauth] getWallet(): Password verification FAILED (attempt ${attempts + 1}/${maxAttempts})`);
+                            }
+
+                            attempts++;
+                            if (attempts >= maxAttempts) {
+                                throw new Error("Too many failed password attempts. Please try again later.");
+                            }
+
+                            // Set error message for next modal display
+                            errorMessage = `Invalid password. Please try again. (${maxAttempts - attempts} attempts remaining)`;
+                        } while (attempts < maxAttempts);
+
+                        console.log("[wauth] getWallet(): Storing verified password in session");
+                        this.sessionPassword = passwordResult.password;
+                        await this.storePasswordInSession(passwordResult.password);
+                    } else {
+                        // Don't show modal, just return null
+                        console.log("[wauth] No session data and not showing modal");
+                        this.sessionPasswordLoading = false;
+                        return null;
+                    }
+                }
+            } finally {
+                this.sessionPasswordLoading = false;
+            }
+        } else if (!this.sessionPassword && this.sessionPasswordLoading) {
+            // Wait for the loading to complete with timeout
+            console.log("[wauth] Waiting for concurrent session password loading...");
+            const maxWaitTime = 5000; // 5 seconds max wait
+            const startTime = Date.now();
+
+            while (this.sessionPasswordLoading && (Date.now() - startTime) < maxWaitTime) {
+                await new Promise(resolve => setTimeout(resolve, 50));
             }
 
-            this.sessionPassword = result.password;
-            await this.storePasswordInSession(result.password);
+            if (this.sessionPasswordLoading) {
+                console.warn("[wauth] Session password loading timeout, proceeding anyway");
+                this.sessionPasswordLoading = false;
+            }
         }
 
         // Ensure we have a user record
@@ -701,6 +992,9 @@ export class WAuth {
                     return this.wallet;
                 }
 
+                if (!this.sessionPassword) {
+                    throw new Error("[wauth] Session password not available");
+                }
                 const encryptedPassword = await PasswordEncryption.encryptPassword(this.sessionPassword, this.backendUrl);
                 const encryptedConfirmPassword = await PasswordEncryption.encryptPassword(this.sessionPassword, this.backendUrl);
 
@@ -819,10 +1113,18 @@ export class WAuth {
         return this.sessionPassword !== null;
     }
 
+    public isSessionPasswordLoading(): boolean {
+        return this.sessionPasswordLoading;
+    }
+
+    public hasStoredSessionData(): boolean {
+        return this.hasSessionStorageData();
+    }
+
     public async refreshWallet(): Promise<void> {
         if (this.isLoggedIn() && this.sessionPassword) {
             try {
-                this.wallet = await this.getWallet();
+                this.wallet = await this.getWallet(false); // Don't show password modal during refresh
             } catch (error) {
                 console.error("Failed to refresh wallet:", error);
                 throw error;
