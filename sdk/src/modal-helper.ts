@@ -1,4 +1,5 @@
 import type { ModalTypes, ModalPayload, ModalResult } from "./index";
+import { wauthLogger } from "./logger";
 
 // Import HTMLSanitizer for safe DOM manipulation
 export class HTMLSanitizer {
@@ -67,7 +68,7 @@ export class HTMLSanitizer {
         } catch {
             // If URL is invalid, don't set href
             link.href = '#';
-            console.warn('Invalid URL provided to createSafeLink:', href);
+            wauthLogger.simple('warn', 'Invalid URL provided to createSafeLink', { href });
         }
 
         link.textContent = text; // textContent automatically escapes
@@ -232,7 +233,7 @@ export function createModal(type: ModalTypes, payload: ModalPayload, onResult: (
 
     // Create wrapper that handles cleanup AFTER the original callback
     const wrappedOnResult = (result: ModalResult) => {
-        console.log("[modal-helper] Modal result received:", { proceed: result.proceed, hasPassword: !!result.password });
+        wauthLogger.simple('info', 'Modal result received', { proceed: result.proceed, hasPassword: !!result.password });
 
         // Call original callback first
         onResult(result);
@@ -374,7 +375,7 @@ export function createConfirmTxModal(payload: ModalPayload, onResult: (result: M
             }
 
         } catch (error) {
-            console.warn("[wauth] Error formatting token quantity:", error)
+            wauthLogger.simple('warn', 'Error formatting token quantity', error)
             return rawQuantity // Fallback to raw quantity
         }
     }
@@ -1349,13 +1350,13 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
 
     // Handle form submission and Enter key
     const handleSubmit = (event?: Event) => {
-        console.log("[modal-helper] New password modal handleSubmit called");
+        wauthLogger.simple('info', 'New password modal handleSubmit called');
         const password = passwordInput.value
         const confirmPassword = confirmInput.value
 
         // Validation
         if (!password) {
-            console.log("[modal-helper] Validation failed: Password is required");
+            wauthLogger.simple('warn', 'New password validation failed: Password is required');
             errorMessage.textContent = "Password is required"
             errorMessage.style.display = "block"
             passwordInput.focus()
@@ -1363,7 +1364,7 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
         }
 
         if (password.length < 8) {
-            console.log("[modal-helper] Validation failed: Password too short");
+            wauthLogger.simple('warn', 'Validation failed: Password too short');
             errorMessage.textContent = "Password must be at least 8 characters long"
             errorMessage.style.display = "block"
             passwordInput.focus()
@@ -1371,7 +1372,7 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
         }
 
         if (!checkPasswordStrength(password)) {
-            console.log("[modal-helper] Validation failed: Password too weak");
+            wauthLogger.simple('warn', 'Validation failed: Password too weak');
             errorMessage.textContent = "Password is too weak. Please use a stronger password."
             errorMessage.style.display = "block"
             passwordInput.focus()
@@ -1379,14 +1380,14 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
         }
 
         if (password !== confirmPassword) {
-            console.log("[modal-helper] Validation failed: Passwords do not match");
+            wauthLogger.simple('warn', 'Validation failed: Passwords do not match');
             errorMessage.textContent = "Passwords do not match"
             errorMessage.style.display = "block"
             confirmInput.focus()
             return false
         }
 
-        console.log("[modal-helper] New password validation passed, calling onResult");
+        wauthLogger.simple('info', 'New password validation passed, calling onResult');
         // Trigger result immediately - form element and proper autocomplete attributes 
         // are sufficient for password manager detection
         onResult({ proceed: true, password })
@@ -1701,19 +1702,19 @@ export function createPasswordExistingModal(payload: ModalPayload, onResult: (re
 
     // Handle form submission and Enter key
     const handleSubmit = (event?: Event) => {
-        console.log("[modal-helper] Existing password modal handleSubmit called");
+        wauthLogger.simple('info', 'Existing password modal handleSubmit called');
         const password = passwordInput.value
 
         // Validation
         if (!password) {
-            console.log("[modal-helper] Validation failed: Password is required");
+            wauthLogger.simple('warn', 'Existing password validation failed: Password is required');
             errorMessage.textContent = "Password is required"
             errorMessage.style.display = "block"
             passwordInput.focus()
             return false
         }
 
-        console.log("[modal-helper] Existing password validation passed, calling onResult");
+        wauthLogger.simple('info', 'Existing password validation passed, calling onResult');
         // NOTE: Backend verification happens in the caller (index.ts), not here
         // This modal just collects the password and returns it
         onResult({ proceed: true, password })

@@ -11,6 +11,7 @@ import base64url from "base64url";
 import { WAUTH_VERSION } from "./version";
 import { createModal, createModalContainer, HTMLSanitizer } from "./modal-helper";
 import { dryrun } from "@permaweb/aoconnect";
+import { wauthLogger, loggedWAuthOperation } from "./logger";
 
 export enum WAuthProviders {
     Google = "google",
@@ -126,7 +127,7 @@ export class WAuth {
 
             sessionStorage.setItem('wauth_encrypted_password', JSON.stringify(encryptedData));
         } catch (error) {
-            console.error("Failed to store password in session:", error);
+            wauthLogger.simple('error', 'Failed to store password in session', error);
         }
     }
 
@@ -158,7 +159,7 @@ export class WAuth {
             const decoder = new TextDecoder();
             return decoder.decode(decrypted);
         } catch (error) {
-            console.error("Failed to load password from session:", error);
+            wauthLogger.simple('error', 'Failed to load password from session', error);
             // Clear invalid data
             sessionStorage.removeItem('wauth_encrypted_password');
             return null;
@@ -198,7 +199,7 @@ export class WAuth {
         this.wallet = null;
         this.authRecord = null;
 
-        console.log("[wauth] Cleared all authentication data");
+        wauthLogger.simple('info', 'Cleared all authentication data');
     }
 
     // Method to check if backend is accessible
@@ -215,7 +216,7 @@ export class WAuth {
             clearTimeout(timeoutId);
             return response.ok;
         } catch (error) {
-            console.warn("[wauth] Backend accessibility check failed:", error);
+            wauthLogger.simple('warn', 'Backend accessibility check failed', error);
             return false;
         }
     }
@@ -229,11 +230,17 @@ export class WAuth {
         this.sessionPassword = null;
         this.sessionKey = null;
 
+        wauthLogger.initialization('Initializing', {
+            dev,
+            url: url || (dev ? WAuth.devUrl : WAuth.prodUrl),
+            backendUrl: this.backendUrl
+        });
+
         // Ensure PocketBase auth state is properly restored
         if (typeof window !== 'undefined') {
             // Check if there's existing PocketBase auth data in localStorage
             const existingAuth = localStorage.getItem('pocketbase_auth');
-            console.log("[wauth] Constructor - checking for existing auth:", !!existingAuth);
+            wauthLogger.simple('info', `Checking for existing auth: ${!!existingAuth ? 'Found' : 'Not found'}`);
             if (existingAuth) {
                 try {
                     // Try to restore the auth state
@@ -241,16 +248,14 @@ export class WAuth {
                     if (authData && authData.token && authData.model) {
                         // Set the auth data in PocketBase
                         this.pb.authStore.save(authData.token, authData.model);
-                        console.log("[wauth] Restored PocketBase authentication state");
+                        wauthLogger.sessionUpdate('Restored', { userId: authData.model?.id });
                     } else {
-                        console.log("[wauth] Existing auth data found but invalid format");
+                        wauthLogger.simple('warn', 'Existing auth data found but invalid format');
                     }
                 } catch (error) {
-                    console.warn("[wauth] Failed to restore PocketBase auth state:", error);
+                    wauthLogger.simple('warn', 'Failed to restore PocketBase auth state', error);
                     // Don't clear the auth data on parse error, let PocketBase handle it
                 }
-            } else {
-                console.log("[wauth] No existing PocketBase auth data found");
             }
         }
 
@@ -265,13 +270,13 @@ export class WAuth {
                         try {
                             this.wallet = await this.getWallet();
                         } catch (error) {
-                            console.warn("Could not load wallet after session restore:", error);
+                            wauthLogger.simple('warn', 'Could not load wallet after session restore', error);
                         }
                     }
                 }
                 this.sessionPasswordLoading = false;
             }).catch(error => {
-                console.error("Failed to load session password:", error);
+                wauthLogger.simple('error', 'Failed to load session password', error);
                 this.sessionPasswordLoading = false;
             });
         }
@@ -286,7 +291,7 @@ export class WAuth {
                 try {
                     this.wallet = await this.getWallet();
                 } catch (error) {
-                    console.warn("[wauth] Could not get wallet in auth change handler:", error);
+                    wauthLogger.simple('warn', 'Could not get wallet in auth change handler', error);
                 }
             }
 
@@ -350,31 +355,31 @@ export class WAuth {
         // Encrypt session password for backend
         if (!this.sessionPassword) {
             // Ask for the password again instead of throwing an error
-            console.log("[wauth] runAction(): Session password not available, asking user");
+            wauthLogger.simple('info', 'Session password not available, requesting from user');
             let passwordResult: ModalResult;
             let attempts = 0;
             const maxAttempts = 3;
             let errorMessage = "Session expired. Please enter your password again.";
 
             do {
-                console.log(`[wauth] runAction(): Showing password modal (attempt ${attempts + 1}/${maxAttempts})`);
+                wauthLogger.passwordOperation(`action password prompt`, true, attempts + 1);
                 passwordResult = await new Promise<ModalResult>((resolve) => {
                     this.createModal("password-existing", { errorMessage }, resolve);
                 });
 
                 if (!passwordResult.proceed || !passwordResult.password) {
-                    console.log("[wauth] runAction(): User cancelled password entry");
+                    wauthLogger.passwordOperation('entry cancelled', false);
                     throw new Error("[wauth] Password required to continue");
                 }
 
                 // CRITICAL: Verify password with backend
-                console.log(`[wauth] runAction(): Verifying password with backend (attempt ${attempts + 1}/${maxAttempts})`);
+                wauthLogger.passwordOperation(`verification started`, true, attempts + 1);
                 const isValidPassword = await this.verifyPassword(passwordResult.password);
                 if (isValidPassword) {
-                    console.log("[wauth] runAction(): Password verification PASSED");
+                    wauthLogger.passwordOperation('verification passed', true);
                     break; // Password is valid, exit loop
                 } else {
-                    console.error(`[wauth] runAction(): Password verification FAILED (attempt ${attempts + 1}/${maxAttempts})`);
+                    wauthLogger.passwordOperation(`verification failed`, false, attempts + 1);
                 }
 
                 attempts++;
@@ -386,7 +391,7 @@ export class WAuth {
                 errorMessage = `Invalid password. Please try again. (${maxAttempts - attempts} attempts remaining)`;
             } while (attempts < maxAttempts);
 
-            console.log("[wauth] runAction(): Storing verified password in session");
+            wauthLogger.sessionUpdate('Storing verified password for action');
             this.sessionPassword = passwordResult.password;
             await this.storePasswordInSession(passwordResult.password);
         }
@@ -519,7 +524,7 @@ export class WAuth {
                     }
 
                 } catch (error) {
-                    console.warn("[wauth] Failed to fetch token details:", error)
+                    wauthLogger.simple('warn', 'Failed to fetch token details', error)
                     // Modal continues to work without token details
                 }
             }
@@ -529,11 +534,13 @@ export class WAuth {
     public async connect({ provider, scopes }: { provider: WAuthProviders, scopes?: string[] }) {
         if (!Object.values(WAuthProviders).includes(provider)) throw new Error(`Invalid provider: ${provider}. Valid providers are: ${Object.values(WAuthProviders).join(", ")}`)
 
+        wauthLogger.authStart('OAuth Authentication', provider, { provider, scopes });
+
         try {
             this.authData = await this.pb.collection("users").authWithOAuth2({ provider, scopes })
             this.authDataListeners.forEach(listener => listener(this.getAuthData()));
         } catch (e) {
-            console.error("[wauth] error logging in,", e)
+            wauthLogger.authError('OAuth Authentication', e);
             return null;
         }
 
@@ -545,11 +552,12 @@ export class WAuth {
         // Verify backend connectivity
         try {
             const response = await fetch(`${this.backendUrl}/`);
+            wauthLogger.backendRequest('GET', '/', response.status);
             if (!response.ok) {
                 throw new Error(`Backend not accessible: ${response.status}`);
             }
         } catch (error) {
-            console.error("Backend connectivity check failed:", error);
+            wauthLogger.simple('error', 'Backend connectivity check failed', error);
             throw new Error("Cannot connect to backend server. Please try again later.");
         }
 
@@ -587,26 +595,26 @@ export class WAuth {
                         }
                     }
 
-                    console.log(`[wauth] connect(): Showing password modal (attempt ${attempts + 1}/${maxAttempts})`);
+                    wauthLogger.passwordOperation(`prompt shown`, true, attempts + 1);
                     passwordResult = await new Promise<ModalResult>((resolve) => {
                         this.createModal("password-existing", { errorMessage }, resolve);
                     });
 
                     if (!passwordResult.proceed || !passwordResult.password) {
-                        console.log("[wauth] connect(): User cancelled password entry");
+                        wauthLogger.passwordOperation('entry cancelled', false);
                         // User cancelled - clear session data but keep PocketBase auth
                         this.clearAllAuthData(false);
                         throw new Error("Password required to access existing wallet");
                     }
 
                     // CRITICAL: Verify password before storing it
-                    console.log(`[wauth] connect(): Attempting password verification (attempt ${attempts + 1}/${maxAttempts})`);
+                    wauthLogger.passwordOperation(`verification started`, true, attempts + 1);
                     const isValidPassword = await this.verifyPassword(passwordResult.password);
                     if (isValidPassword) {
-                        console.log("[wauth] connect(): Password verification PASSED");
+                        wauthLogger.passwordOperation('verification passed', true);
                         break; // Password is valid, exit loop
                     } else {
-                        console.error(`[wauth] connect(): Password verification FAILED (attempt ${attempts + 1}/${maxAttempts})`);
+                        wauthLogger.passwordOperation(`verification failed`, false, attempts + 1);
                     }
 
                     attempts++;
@@ -628,7 +636,7 @@ export class WAuth {
                 } while (attempts < maxAttempts);
 
                 // Store password in session for future use - password is already verified above
-                console.log("[wauth] connect(): Storing verified password in session");
+                wauthLogger.sessionUpdate('Storing verified password');
                 this.sessionPassword = passwordResult.password;
                 await this.storePasswordInSession(passwordResult.password);
 
@@ -636,19 +644,19 @@ export class WAuth {
                 this.wallet = await this.getWallet();
             } else {
                 // New user - ask for password to create wallet using modal
-                console.log("[wauth] connect(): New user detected, asking for password to create wallet");
+                wauthLogger.simple('info', 'New user detected, requesting password for wallet creation');
                 const result = await new Promise<ModalResult>((resolve) => {
                     this.createModal("password-new", {}, resolve);
                 });
 
                 if (!result.proceed || !result.password) {
-                    console.log("[wauth] connect(): User cancelled new password creation");
+                    wauthLogger.passwordOperation('new password creation cancelled', false);
                     // User cancelled - clear session data but keep PocketBase auth
                     this.clearAllAuthData(false);
                     throw new Error("Password required to create wallet");
                 }
 
-                console.log("[wauth] connect(): New password created, storing in session (no verification needed for new passwords)");
+                wauthLogger.sessionUpdate('Storing new password');
                 // Store password in session - new passwords don't need backend verification since no wallet exists yet
                 this.sessionPassword = result.password;
                 await this.storePasswordInSession(result.password);
@@ -658,11 +666,16 @@ export class WAuth {
             }
 
             if (!this.wallet) {
-                console.error("[wauth] no wallet found")
+                wauthLogger.simple('error', 'No wallet found after authentication');
                 throw new Error("Failed to create or access wallet")
             }
+
+            wauthLogger.authSuccess('OAuth Authentication', {
+                userId: this.authData?.record?.id,
+                walletAddress: this.wallet.address
+            });
         } catch (e) {
-            console.error("[wauth]", e)
+            wauthLogger.authError('OAuth Authentication', e);
             // Clear all authentication data on error, but be more selective about localStorage
             // Only clear localStorage if it's a critical error that invalidates the auth
             const errorMessage = e instanceof Error ? e.message : String(e);
@@ -694,23 +707,23 @@ export class WAuth {
 
             return result.totalItems > 0;
         } catch (e) {
-            console.error("Error checking for existing wallet:", e);
+            wauthLogger.simple('error', 'Error checking for existing wallet', e);
             return false;
         }
     }
 
     private async verifyPassword(password: string): Promise<boolean> {
         try {
-            console.log("[wauth] Starting password verification with backend");
+            wauthLogger.backendRequest('POST', '/verify-password');
             // First check if we're logged in
             if (!this.isLoggedIn()) {
-                console.error("[wauth] Cannot verify password: not logged in");
+                wauthLogger.simple('error', 'Cannot verify password: not logged in');
                 return false;
             }
 
             // Encrypt password for backend
             const encryptedPassword = await PasswordEncryption.encryptPassword(password, this.backendUrl);
-            console.log("[wauth] Password encrypted for backend verification");
+            wauthLogger.simple('info', 'Password encrypted for backend verification');
 
             // Call verification endpoint
             const response = await fetch(`${this.backendUrl}/verify-password`, {
@@ -723,31 +736,31 @@ export class WAuth {
             });
 
             if (!response.ok) {
-                console.error(`[wauth] Password verification failed with status: ${response.status}`);
+                wauthLogger.backendRequest('POST', '/verify-password', response.status);
                 return false;
             }
 
             const result = await response.json();
             const isValid = result.valid === true;
-            console.log("[wauth] Password verification result:", isValid ? "VALID" : "INVALID");
+            wauthLogger.simple('info', `Password verification result: ${isValid ? "VALID" : "INVALID"}`);
             return isValid;
         } catch (error) {
-            console.error("[wauth] Password verification failed:", error);
+            wauthLogger.simple('error', 'Password verification failed', error);
             return false;
         }
     }
 
     // Enhanced password verification helper with debugging
     private async verifyAndStorePassword(password: string, context: string): Promise<boolean> {
-        console.log(`[wauth] ${context}: Verifying password with backend before storing`);
+        wauthLogger.simple('info', `${context}: Verifying password with backend before storing`);
 
         const isValidPassword = await this.verifyPassword(password);
         if (!isValidPassword) {
-            console.error(`[wauth] ${context}: Password verification FAILED - will not store invalid password`);
+            wauthLogger.simple('error', `${context}: Password verification FAILED - will not store invalid password`);
             return false;
         }
 
-        console.log(`[wauth] ${context}: Password verification PASSED - storing in session`);
+        wauthLogger.sessionUpdate(`${context}: Password verification PASSED, storing in session`);
         this.sessionPassword = password;
         await this.storePasswordInSession(password);
         return true;
@@ -775,7 +788,6 @@ export class WAuth {
 
     public isLoggedIn() {
         const isValid = this.pb.authStore.isValid;
-        console.log("[wauth] isLoggedIn check:", isValid, "token:", !!this.pb.authStore.token, "record:", !!this.pb.authStore.record);
         return isValid;
     }
 
@@ -836,10 +848,10 @@ export class WAuth {
                     const sessionPassword = await this.loadPasswordFromSession();
                     if (sessionPassword) {
                         this.sessionPassword = sessionPassword;
-                        console.log("[wauth] Session password loaded from storage");
+                        wauthLogger.sessionUpdate('Password loaded from storage');
                     } else {
                         // Session storage data exists but failed to decrypt
-                        console.warn("[wauth] Failed to decrypt session password, clearing storage");
+                        wauthLogger.sessionUpdate('Failed to decrypt session password, clearing storage');
                         this.clearSessionPassword();
 
                         // Only show modal if explicitly requested
@@ -850,24 +862,24 @@ export class WAuth {
                             let errorMessage = "Session expired. Please enter your password again.";
 
                             do {
-                                console.log(`[wauth] getWallet(): Showing password modal for session expired (attempt ${attempts + 1}/${maxAttempts})`);
+                                wauthLogger.passwordOperation(`session expired prompt`, true, attempts + 1);
                                 passwordResult = await new Promise<ModalResult>((resolve) => {
                                     this.createModal("password-existing", { errorMessage }, resolve);
                                 });
 
                                 if (!passwordResult.proceed || !passwordResult.password) {
-                                    console.log("[wauth] getWallet(): User cancelled password entry");
+                                    wauthLogger.passwordOperation('entry cancelled', false);
                                     throw new Error("[wauth] Password required to access wallet");
                                 }
 
                                 // CRITICAL: Verify password with backend
-                                console.log(`[wauth] getWallet(): Verifying password with backend (attempt ${attempts + 1}/${maxAttempts})`);
+                                wauthLogger.passwordOperation(`verification started`, true, attempts + 1);
                                 const isValidPassword = await this.verifyPassword(passwordResult.password);
                                 if (isValidPassword) {
-                                    console.log("[wauth] getWallet(): Password verification PASSED");
+                                    wauthLogger.passwordOperation('verification passed', true);
                                     break; // Password is valid, exit loop
                                 } else {
-                                    console.error(`[wauth] getWallet(): Password verification FAILED (attempt ${attempts + 1}/${maxAttempts})`);
+                                    wauthLogger.passwordOperation(`verification failed`, false, attempts + 1);
                                 }
 
                                 attempts++;
@@ -879,19 +891,19 @@ export class WAuth {
                                 errorMessage = `Invalid password. Please try again. (${maxAttempts - attempts} attempts remaining)`;
                             } while (attempts < maxAttempts);
 
-                            console.log("[wauth] getWallet(): Storing verified password in session");
+                            wauthLogger.sessionUpdate('Storing verified password');
                             this.sessionPassword = passwordResult.password;
                             await this.storePasswordInSession(passwordResult.password);
                         } else {
                             // Don't show modal, just return null
-                            console.log("[wauth] Session password unavailable, not showing modal");
+                            wauthLogger.simple('info', 'Session password unavailable, not showing modal');
                             this.sessionPasswordLoading = false;
                             return null;
                         }
                     }
                 } else {
                     // No session storage data exists
-                    console.log("[wauth] getWallet(): No session storage data found");
+                    wauthLogger.simple('info', 'No session storage data found');
                     if (showPasswordModal) {
                         let passwordResult: ModalResult;
                         let attempts = 0;
@@ -899,24 +911,24 @@ export class WAuth {
                         let errorMessage = "Please enter your password to access your wallet.";
 
                         do {
-                            console.log(`[wauth] getWallet(): Showing password modal for no session data (attempt ${attempts + 1}/${maxAttempts})`);
+                            wauthLogger.passwordOperation(`no session data prompt`, true, attempts + 1);
                             passwordResult = await new Promise<ModalResult>((resolve) => {
                                 this.createModal("password-existing", { errorMessage }, resolve);
                             });
 
                             if (!passwordResult.proceed || !passwordResult.password) {
-                                console.log("[wauth] getWallet(): User cancelled password entry");
+                                wauthLogger.passwordOperation('entry cancelled', false);
                                 throw new Error("[wauth] Password required to access wallet");
                             }
 
                             // CRITICAL: Verify password with backend
-                            console.log(`[wauth] getWallet(): Verifying password with backend (attempt ${attempts + 1}/${maxAttempts})`);
+                            wauthLogger.passwordOperation(`verification started`, true, attempts + 1);
                             const isValidPassword = await this.verifyPassword(passwordResult.password);
                             if (isValidPassword) {
-                                console.log("[wauth] getWallet(): Password verification PASSED");
+                                wauthLogger.passwordOperation('verification passed', true);
                                 break; // Password is valid, exit loop
                             } else {
-                                console.error(`[wauth] getWallet(): Password verification FAILED (attempt ${attempts + 1}/${maxAttempts})`);
+                                wauthLogger.passwordOperation(`verification failed`, false, attempts + 1);
                             }
 
                             attempts++;
@@ -928,12 +940,12 @@ export class WAuth {
                             errorMessage = `Invalid password. Please try again. (${maxAttempts - attempts} attempts remaining)`;
                         } while (attempts < maxAttempts);
 
-                        console.log("[wauth] getWallet(): Storing verified password in session");
+                        wauthLogger.sessionUpdate('Storing verified password');
                         this.sessionPassword = passwordResult.password;
                         await this.storePasswordInSession(passwordResult.password);
                     } else {
                         // Don't show modal, just return null
-                        console.log("[wauth] No session data and not showing modal");
+                        wauthLogger.simple('info', 'No session data and not showing modal');
                         this.sessionPasswordLoading = false;
                         return null;
                     }
@@ -943,7 +955,7 @@ export class WAuth {
             }
         } else if (!this.sessionPassword && this.sessionPasswordLoading) {
             // Wait for the loading to complete with timeout
-            console.log("[wauth] Waiting for concurrent session password loading...");
+            wauthLogger.simple('info', 'Waiting for concurrent session password loading...');
             const maxWaitTime = 5000; // 5 seconds max wait
             const startTime = Date.now();
 
@@ -952,7 +964,7 @@ export class WAuth {
             }
 
             if (this.sessionPasswordLoading) {
-                console.warn("[wauth] Session password loading timeout, proceeding anyway");
+                wauthLogger.simple('warn', 'Session password loading timeout, proceeding anyway');
                 this.sessionPasswordLoading = false;
             }
         }
@@ -970,16 +982,16 @@ export class WAuth {
                 filter: `user.id = "${userId}"`
             });
 
-            console.log(`[wauth] Wallet query result: ${result.totalItems} wallets found for user ${userId}`);
+            wauthLogger.walletOperation('Query', { userId, walletsFound: result.totalItems });
 
             if (result.totalItems > 0) {
                 // Existing wallet found
-                console.log(`[wauth] Using existing wallet: ${result.items[0].id}`);
+                wauthLogger.walletOperation('Using existing wallet', { walletId: result.items[0].id });
                 this.wallet = result.items[0];
                 return this.wallet;
             } else {
                 // No wallet exists, create one
-                console.log(`[wauth] No existing wallet found, creating new wallet for user ${userId}`);
+                wauthLogger.walletOperation('Creating new wallet', { userId });
 
                 // Double-check that no wallet exists before creating (prevent race conditions)
                 const doubleCheckResult = await this.pb.collection("wallets").getList(1, 1, {
@@ -987,7 +999,7 @@ export class WAuth {
                 });
 
                 if (doubleCheckResult.totalItems > 0) {
-                    console.log(`[wauth] Wallet created by another process, using existing wallet: ${doubleCheckResult.items[0].id}`);
+                    wauthLogger.walletOperation('Using wallet created by another process', { walletId: doubleCheckResult.items[0].id });
                     this.wallet = doubleCheckResult.items[0];
                     return this.wallet;
                 }
@@ -998,7 +1010,7 @@ export class WAuth {
                 const encryptedPassword = await PasswordEncryption.encryptPassword(this.sessionPassword, this.backendUrl);
                 const encryptedConfirmPassword = await PasswordEncryption.encryptPassword(this.sessionPassword, this.backendUrl);
 
-                console.log(`[wauth] Creating wallet with encrypted password headers`);
+                wauthLogger.backendRequest('POST', '/wallets');
                 await this.pb.collection("wallets").create({}, {
                     headers: {
                         "encrypted-password": encryptedPassword,
@@ -1015,7 +1027,7 @@ export class WAuth {
                     throw new Error("[wauth] Failed to create wallet - no record found after creation");
                 }
 
-                console.log(`[wauth] Successfully created wallet: ${createdResult.items[0].id}`);
+                wauthLogger.walletOperation('Successfully created wallet', { walletId: createdResult.items[0].id });
                 this.wallet = createdResult.items[0];
                 return this.wallet;
             }
@@ -1028,7 +1040,7 @@ export class WAuth {
                 throw new Error("[wauth] Invalid password - please reconnect and try again");
             }
 
-            console.error("Error in getWallet:", e.message || e);
+            wauthLogger.simple('error', 'Error in getWallet', e.message || e);
             throw e; // Re-throw to preserve error handling in connect()
         }
     }
@@ -1058,7 +1070,7 @@ export class WAuth {
 
             return { success: true, walletId }
         } catch (error) {
-            console.error("Error removing connected wallet:", error)
+            wauthLogger.simple('error', 'Error removing connected wallet', error)
             throw error
         }
     }
@@ -1073,14 +1085,14 @@ export class WAuth {
     }
 
     public async sign(transaction: Transaction, options?: SignatureOptions) {
-        if (options) console.warn("[wauth] Signature options are not supported yet")
+        if (options) wauthLogger.simple('warn', 'Signature options are not supported yet')
 
         return await this.runAction(WalletActions.SIGN, { transaction: transaction.toJSON() })
     }
 
     public async signature(data: Uint8Array, algorithm?: AlgorithmIdentifier | RsaPssParams | EcdsaParams): Promise<Uint8Array> {
         if (algorithm) {
-            console.warn("[wauth] Signature algorithm is not supported and Rsa4096Pss will be used by default")
+            wauthLogger.simple('warn', 'Signature algorithm is not supported and Rsa4096Pss will be used by default')
         }
         return Object.values(await this.runAction(WalletActions.SIGNATURE, { data })) as any
     }
@@ -1126,7 +1138,7 @@ export class WAuth {
             try {
                 this.wallet = await this.getWallet(false); // Don't show password modal during refresh
             } catch (error) {
-                console.error("Failed to refresh wallet:", error);
+                wauthLogger.simple('error', 'Failed to refresh wallet', error);
                 throw error;
             }
         }
@@ -1176,7 +1188,7 @@ class PasswordEncryption {
 
             return this.publicKey;
         } catch (error) {
-            console.error("Failed to get backend public key:", error);
+            wauthLogger.simple('error', 'Failed to get backend public key', error);
             throw new Error("Failed to initialize password encryption: " + (error as Error).message);
         }
     }
@@ -1203,7 +1215,7 @@ class PasswordEncryption {
 
             return btoa(String.fromCharCode(...new Uint8Array(encrypted)));
         } catch (error) {
-            console.error("Password encryption failed:", error);
+            wauthLogger.simple('error', 'Password encryption failed', error);
             throw new Error("Failed to encrypt password: " + (error as Error).message);
         }
     }
@@ -1222,7 +1234,7 @@ export class WauthSigner {
         this.publicKey = Buffer.alloc(0);
         // Immediately set the public key
         this.setPublicKey().catch(error => {
-            console.error("Failed to set initial public key:", error);
+            wauthLogger.simple('error', 'Failed to set initial public key', error);
             throw error;
         });
     }
@@ -1235,7 +1247,7 @@ export class WauthSigner {
                 throw new Error(`Public key length mismatch. Expected ${this.ownerLength} bytes but got ${this.publicKey.length} bytes`);
             }
         } catch (error) {
-            console.error("Failed to set public key:", error);
+            wauthLogger.simple('error', 'Failed to set public key', error);
             throw error;
         }
     }
@@ -1255,7 +1267,7 @@ export class WauthSigner {
 
             return buf;
         } catch (error) {
-            console.error("Sign operation failed:", error);
+            wauthLogger.simple('error', 'Sign operation failed', error);
             throw error;
         }
     }
@@ -1295,7 +1307,7 @@ export class WauthSigner {
 
             return result;
         } catch (error: any) {
-            console.error("Verify operation failed:", error?.message || "Unknown error");
+            wauthLogger.simple('error', 'Verify operation failed', error?.message || "Unknown error");
             return false;
         }
     }
