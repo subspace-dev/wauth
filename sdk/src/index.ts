@@ -9,165 +9,8 @@ import { DataItem } from "@dha-team/arbundles";
 import axios from "axios";
 import base64url from "base64url";
 import { WAUTH_VERSION } from "./version";
-import { createModal, createModalContainer } from "./modal-helper";
+import { createModal, createModalContainer, HTMLSanitizer } from "./modal-helper";
 import { dryrun } from "@permaweb/aoconnect";
-
-// HTML Sanitization Utility
-class HTMLSanitizer {
-    /**
-     * Escapes HTML entities to prevent XSS attacks
-     * @param text - The text to escape
-     * @returns Escaped text safe for innerHTML
-     */
-    static escapeHTML(text: string): string {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    /**
-     * Creates a safe HTML string with basic formatting
-     * @param text - The text content
-     * @param allowedTags - Array of allowed HTML tags (default: ['br', 'strong', 'em'])
-     * @returns Sanitized HTML string
-     */
-    static sanitizeHTML(text: string, allowedTags: string[] = ['br', 'strong', 'em']): string {
-        // First escape all HTML
-        let sanitized = this.escapeHTML(text);
-
-        // Then allow specific tags back in a controlled way
-        allowedTags.forEach(tag => {
-            const escapedOpenTag = `&lt;${tag}&gt;`;
-            const escapedCloseTag = `&lt;/${tag}&gt;`;
-            const openTagRegex = new RegExp(escapedOpenTag, 'gi');
-            const closeTagRegex = new RegExp(escapedCloseTag, 'gi');
-
-            sanitized = sanitized.replace(openTagRegex, `<${tag}>`);
-            sanitized = sanitized.replace(closeTagRegex, `</${tag}>`);
-        });
-
-        return sanitized;
-    }
-
-    /**
-     * Safely sets innerHTML with sanitization
-     * @param element - The DOM element
-     * @param html - The HTML content to set
-     * @param allowedTags - Array of allowed HTML tags
-     */
-    static safeSetInnerHTML(element: HTMLElement, html: string, allowedTags?: string[]): void {
-        element.innerHTML = this.sanitizeHTML(html, allowedTags);
-    }
-
-    /**
-     * Creates a safe link element
-     * @param href - The URL (will be validated)
-     * @param text - The link text (will be escaped)
-     * @param target - Link target (default: '_blank')
-     * @returns HTMLAnchorElement
-     */
-    static createSafeLink(href: string, text: string, target: string = '_blank'): HTMLAnchorElement {
-        const link = document.createElement('a');
-
-        // Validate URL - only allow http/https
-        try {
-            const url = new URL(href);
-            if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-                throw new Error('Invalid protocol');
-            }
-            link.href = url.toString();
-        } catch {
-            // If URL is invalid, don't set href
-            link.href = '#';
-            console.warn('Invalid URL provided to createSafeLink:', href);
-        }
-
-        link.textContent = text; // textContent automatically escapes
-        link.target = target;
-
-        // Security attributes for external links
-        if (target === '_blank') {
-            link.rel = 'noopener noreferrer';
-        }
-
-        return link;
-    }
-}
-
-// Export HTMLSanitizer for external use
-export { HTMLSanitizer };
-
-// Frontend password encryption utilities
-class PasswordEncryption {
-    private static publicKey: CryptoKey | null = null;
-
-    static async getBackendPublicKey(backendUrl: string): Promise<CryptoKey> {
-        if (this.publicKey) {
-            return this.publicKey;
-        }
-
-        try {
-            const response = await fetch(`${backendUrl}/public-key`);
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const data = await response.json();
-
-            if (data.error) {
-                throw new Error(`Backend error: ${data.error}`);
-            }
-
-            if (!data.publicKey) {
-                throw new Error("No public key in response");
-            }
-
-            this.publicKey = await crypto.subtle.importKey(
-                "jwk",
-                data.publicKey,
-                {
-                    name: "RSA-OAEP",
-                    hash: "SHA-256",
-                },
-                false,
-                ["encrypt"]
-            );
-
-            return this.publicKey;
-        } catch (error) {
-            console.error("Failed to get backend public key:", error);
-            throw new Error("Failed to initialize password encryption: " + (error as Error).message);
-        }
-    }
-
-    static async encryptPassword(password: string, backendUrl: string): Promise<string> {
-        try {
-            const publicKey = await this.getBackendPublicKey(backendUrl);
-
-            // Generate nonce and timestamp for anti-replay protection
-            const nonce = crypto.randomUUID();
-            const timestamp = Date.now();
-
-            const payload = {
-                password,
-                nonce,
-                timestamp
-            };
-
-            const encrypted = await crypto.subtle.encrypt(
-                { name: "RSA-OAEP" },
-                publicKey,
-                new TextEncoder().encode(JSON.stringify(payload))
-            );
-
-            return btoa(String.fromCharCode(...new Uint8Array(encrypted)));
-        } catch (error) {
-            console.error("Password encryption failed:", error);
-            throw new Error("Failed to encrypt password: " + (error as Error).message);
-        }
-    }
-}
 
 export enum WAuthProviders {
     Google = "google",
@@ -201,116 +44,6 @@ type ModalResult = {
     password?: string
 }
 export type { ModalResult }
-
-export class WauthSigner {
-    private wauth: WAuth;
-    public publicKey: Buffer;
-    public ownerLength = 512;
-    public signatureLength = 512;
-    public signatureType = 1;
-
-    constructor(wauth: WAuth) {
-        this.wauth = wauth;
-        // Initialize publicKey as empty buffer, will be set in setPublicKey
-        this.publicKey = Buffer.alloc(0);
-        // Immediately set the public key
-        this.setPublicKey().catch(error => {
-            console.error("Failed to set initial public key:", error);
-            throw error;
-        });
-    }
-
-    async setPublicKey() {
-        try {
-            const arOwner = await this.wauth.getActivePublicKey();
-            this.publicKey = base64url.toBuffer(arOwner);
-            if (this.publicKey.length !== this.ownerLength) {
-                throw new Error(`Public key length mismatch. Expected ${this.ownerLength} bytes but got ${this.publicKey.length} bytes`);
-            }
-        } catch (error) {
-            console.error("Failed to set public key:", error);
-            throw error;
-        }
-    }
-
-    async sign(message: Uint8Array): Promise<Uint8Array> {
-        try {
-            if (!this.publicKey.length || this.publicKey.length !== this.ownerLength) {
-                await this.setPublicKey();
-            }
-
-            const signature = await this.wauth.signature(message);
-            const buf = new Uint8Array(Object.values(signature).map((v) => +v));
-
-            if (buf.length !== this.signatureLength) {
-                throw new Error(`Signature length mismatch. Expected ${this.signatureLength} bytes but got ${buf.length} bytes`);
-            }
-
-            return buf;
-        } catch (error) {
-            console.error("Sign operation failed:", error);
-            throw error;
-        }
-    }
-
-    static async verify(pk: string | Buffer, message: Uint8Array, signature: Uint8Array): Promise<boolean> {
-        try {
-            // Convert Buffer to string if needed
-            const publicKeyString = Buffer.isBuffer(pk) ? pk.toString() : pk;
-
-            // Import the public key for verification
-            const publicJWK: JsonWebKey = {
-                e: "AQAB",
-                ext: true,
-                kty: "RSA",
-                n: publicKeyString
-            };
-
-            // Import public key for verification
-            const verificationKey = await crypto.subtle.importKey(
-                "jwk",
-                publicJWK,
-                {
-                    name: "RSA-PSS",
-                    hash: "SHA-256"
-                },
-                false,
-                ["verify"]
-            );
-
-            // Verify the signature
-            const result = await crypto.subtle.verify(
-                { name: "RSA-PSS", saltLength: 32 },
-                verificationKey,
-                signature,
-                message
-            );
-
-            return result;
-        } catch (error: any) {
-            console.error("Verify operation failed:", error?.message || "Unknown error");
-            return false;
-        }
-    }
-}
-
-async function getTokenDetails(token: string) {
-    const res = await dryrun({
-        process: token,
-        tags: [{ name: "Action", value: "Info" }]
-    })
-    if (res.Messages.length < 1) throw new Error("No info message found")
-
-    const msg = res.Messages[0]
-    const tags = msg.Tags
-    // transform tags {name,value}[] to {name:value}
-    const tagsObj = tags.reduce((acc: any, tag: any) => {
-        acc[tag.name] = tag.value
-        return acc
-    }, {})
-
-    return tagsObj
-}
 
 export class WAuth {
     static devUrl = "http://localhost:8090"
@@ -562,7 +295,17 @@ export class WAuth {
 
         // Encrypt session password for backend
         if (!this.sessionPassword) {
-            throw new Error("Session password not available - please reconnect");
+            // Ask for the password again instead of throwing an error
+            const result = await new Promise<ModalResult>((resolve) => {
+                this.createModal("password-existing", { errorMessage: "Session expired. Please enter your password again." }, resolve);
+            });
+
+            if (!result.proceed || !result.password) {
+                throw new Error("[wauth] Password required to continue");
+            }
+
+            this.sessionPassword = result.password;
+            await this.storePasswordInSession(result.password);
         }
 
         const encryptedPassword = await PasswordEncryption.encryptPassword(this.sessionPassword, this.backendUrl);
@@ -909,12 +652,23 @@ export class WAuth {
         }
 
         if (!this.sessionPassword) {
-            throw new Error("Session password not available - please reconnect");
+            // throw new Error("Session password not available - please reconnect");
+            // ask for the password again
+            const result = await new Promise<ModalResult>((resolve) => {
+                this.createModal("password-existing", { errorMessage: "Session expired. Please enter your password again." }, resolve);
+            });
+
+            if (!result.proceed || !result.password) {
+                throw new Error("[wauth] Password required to access wallet");
+            }
+
+            this.sessionPassword = result.password;
+            await this.storePasswordInSession(result.password);
         }
 
         // Ensure we have a user record
         if (!this.pb.authStore.record?.id) {
-            throw new Error("User record not available - please log in again");
+            throw new Error("[wauth] User record not available - please log in again");
         }
 
         const userId = this.pb.authStore.record.id;
@@ -925,15 +679,32 @@ export class WAuth {
                 filter: `user.id = "${userId}"`
             });
 
+            console.log(`[wauth] Wallet query result: ${result.totalItems} wallets found for user ${userId}`);
+
             if (result.totalItems > 0) {
                 // Existing wallet found
+                console.log(`[wauth] Using existing wallet: ${result.items[0].id}`);
                 this.wallet = result.items[0];
                 return this.wallet;
             } else {
                 // No wallet exists, create one
+                console.log(`[wauth] No existing wallet found, creating new wallet for user ${userId}`);
+
+                // Double-check that no wallet exists before creating (prevent race conditions)
+                const doubleCheckResult = await this.pb.collection("wallets").getList(1, 1, {
+                    filter: `user.id = "${userId}"`
+                });
+
+                if (doubleCheckResult.totalItems > 0) {
+                    console.log(`[wauth] Wallet created by another process, using existing wallet: ${doubleCheckResult.items[0].id}`);
+                    this.wallet = doubleCheckResult.items[0];
+                    return this.wallet;
+                }
+
                 const encryptedPassword = await PasswordEncryption.encryptPassword(this.sessionPassword, this.backendUrl);
                 const encryptedConfirmPassword = await PasswordEncryption.encryptPassword(this.sessionPassword, this.backendUrl);
 
+                console.log(`[wauth] Creating wallet with encrypted password headers`);
                 await this.pb.collection("wallets").create({}, {
                     headers: {
                         "encrypted-password": encryptedPassword,
@@ -947,9 +718,10 @@ export class WAuth {
                 });
 
                 if (createdResult.totalItems === 0) {
-                    throw new Error("Failed to create wallet - no record found after creation");
+                    throw new Error("[wauth] Failed to create wallet - no record found after creation");
                 }
 
+                console.log(`[wauth] Successfully created wallet: ${createdResult.items[0].id}`);
                 this.wallet = createdResult.items[0];
                 return this.wallet;
             }
@@ -959,7 +731,7 @@ export class WAuth {
             // Check if this is a password-related error
             if (e.message && e.message.includes("decrypt") || e.message.includes("password")) {
                 this.clearSessionPassword(); // Clear invalid password
-                throw new Error("Invalid password - please reconnect and try again");
+                throw new Error("[wauth] Invalid password - please reconnect and try again");
             }
 
             console.error("Error in getWallet:", e.message || e);
@@ -984,7 +756,7 @@ export class WAuth {
             })
 
             if (!wallet) {
-                throw new Error("Wallet not found or not owned by current user")
+                throw new Error("[wauth]    Wallet not found or not owned by current user")
             }
 
             // Delete the wallet record
@@ -1061,4 +833,186 @@ export class WAuth {
     public logout() {
         this.clearAllAuthData();
     }
+}
+
+// Frontend password encryption utilities
+class PasswordEncryption {
+    private static publicKey: CryptoKey | null = null;
+
+    static async getBackendPublicKey(backendUrl: string): Promise<CryptoKey> {
+        if (this.publicKey) {
+            return this.publicKey;
+        }
+
+        try {
+            const response = await fetch(`${backendUrl}/public-key`);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+
+            if (data.error) {
+                throw new Error(`Backend error: ${data.error}`);
+            }
+
+            if (!data.publicKey) {
+                throw new Error("No public key in response");
+            }
+
+            this.publicKey = await crypto.subtle.importKey(
+                "jwk",
+                data.publicKey,
+                {
+                    name: "RSA-OAEP",
+                    hash: "SHA-256",
+                },
+                false,
+                ["encrypt"]
+            );
+
+            return this.publicKey;
+        } catch (error) {
+            console.error("Failed to get backend public key:", error);
+            throw new Error("Failed to initialize password encryption: " + (error as Error).message);
+        }
+    }
+
+    static async encryptPassword(password: string, backendUrl: string): Promise<string> {
+        try {
+            const publicKey = await this.getBackendPublicKey(backendUrl);
+
+            // Generate nonce and timestamp for anti-replay protection
+            const nonce = crypto.randomUUID();
+            const timestamp = Date.now();
+
+            const payload = {
+                password,
+                nonce,
+                timestamp
+            };
+
+            const encrypted = await crypto.subtle.encrypt(
+                { name: "RSA-OAEP" },
+                publicKey,
+                new TextEncoder().encode(JSON.stringify(payload))
+            );
+
+            return btoa(String.fromCharCode(...new Uint8Array(encrypted)));
+        } catch (error) {
+            console.error("Password encryption failed:", error);
+            throw new Error("Failed to encrypt password: " + (error as Error).message);
+        }
+    }
+}
+
+export class WauthSigner {
+    private wauth: WAuth;
+    public publicKey: Buffer;
+    public ownerLength = 512;
+    public signatureLength = 512;
+    public signatureType = 1;
+
+    constructor(wauth: WAuth) {
+        this.wauth = wauth;
+        // Initialize publicKey as empty buffer, will be set in setPublicKey
+        this.publicKey = Buffer.alloc(0);
+        // Immediately set the public key
+        this.setPublicKey().catch(error => {
+            console.error("Failed to set initial public key:", error);
+            throw error;
+        });
+    }
+
+    async setPublicKey() {
+        try {
+            const arOwner = await this.wauth.getActivePublicKey();
+            this.publicKey = base64url.toBuffer(arOwner);
+            if (this.publicKey.length !== this.ownerLength) {
+                throw new Error(`Public key length mismatch. Expected ${this.ownerLength} bytes but got ${this.publicKey.length} bytes`);
+            }
+        } catch (error) {
+            console.error("Failed to set public key:", error);
+            throw error;
+        }
+    }
+
+    async sign(message: Uint8Array): Promise<Uint8Array> {
+        try {
+            if (!this.publicKey.length || this.publicKey.length !== this.ownerLength) {
+                await this.setPublicKey();
+            }
+
+            const signature = await this.wauth.signature(message);
+            const buf = new Uint8Array(Object.values(signature).map((v) => +v));
+
+            if (buf.length !== this.signatureLength) {
+                throw new Error(`Signature length mismatch. Expected ${this.signatureLength} bytes but got ${buf.length} bytes`);
+            }
+
+            return buf;
+        } catch (error) {
+            console.error("Sign operation failed:", error);
+            throw error;
+        }
+    }
+
+    static async verify(pk: string | Buffer, message: Uint8Array, signature: Uint8Array): Promise<boolean> {
+        try {
+            // Convert Buffer to string if needed
+            const publicKeyString = Buffer.isBuffer(pk) ? pk.toString() : pk;
+
+            // Import the public key for verification
+            const publicJWK: JsonWebKey = {
+                e: "AQAB",
+                ext: true,
+                kty: "RSA",
+                n: publicKeyString
+            };
+
+            // Import public key for verification
+            const verificationKey = await crypto.subtle.importKey(
+                "jwk",
+                publicJWK,
+                {
+                    name: "RSA-PSS",
+                    hash: "SHA-256"
+                },
+                false,
+                ["verify"]
+            );
+
+            // Verify the signature
+            const result = await crypto.subtle.verify(
+                { name: "RSA-PSS", saltLength: 32 },
+                verificationKey,
+                signature,
+                message
+            );
+
+            return result;
+        } catch (error: any) {
+            console.error("Verify operation failed:", error?.message || "Unknown error");
+            return false;
+        }
+    }
+}
+
+async function getTokenDetails(token: string) {
+    const res = await dryrun({
+        process: token,
+        tags: [{ name: "Action", value: "Info" }]
+    })
+    if (res.Messages.length < 1) throw new Error("No info message found")
+
+    const msg = res.Messages[0]
+    const tags = msg.Tags
+    // transform tags {name,value}[] to {name:value}
+    const tagsObj = tags.reduce((acc: any, tag: any) => {
+        acc[tag.name] = tag.value
+        return acc
+    }, {})
+
+    return tagsObj
 }

@@ -2,7 +2,7 @@
 import type { ModalTypes, ModalPayload, ModalResult } from "./index";
 
 // Import HTMLSanitizer for safe DOM manipulation
-class HTMLSanitizer {
+export class HTMLSanitizer {
     /**
      * Escapes HTML entities to prevent XSS attacks
      * @param text - The text to escape
@@ -97,10 +97,32 @@ export function createModalContainer() {
     div.style.flexDirection = "column"
     div.style.justifyContent = "center"
     div.style.alignItems = "center"
-    div.style.zIndex = "2147483647" // Maximum z-index value
+    div.style.zIndex = "999999999" // Extremely high z-index to override shadcn/radix components
     div.style.backdropFilter = "blur(8px)"
     div.style.color = "#fff"
     div.style.animation = "fadeIn 0.3s ease-out"
+    div.style.pointerEvents = "all" // Ensure all pointer events are captured
+
+    // Comprehensive event blocking to prevent any interactions with background elements
+    const preventEvent = (e: Event) => {
+        e.stopPropagation()
+        e.stopImmediatePropagation()
+        e.preventDefault()
+    }
+
+    // Block all types of pointer and mouse events
+    div.addEventListener('click', preventEvent, true)
+    div.addEventListener('mousedown', preventEvent, true)
+    div.addEventListener('mouseup', preventEvent, true)
+    div.addEventListener('mousemove', preventEvent, true)
+    div.addEventListener('pointerdown', preventEvent, true)
+    div.addEventListener('pointerup', preventEvent, true)
+    div.addEventListener('pointermove', preventEvent, true)
+    div.addEventListener('touchstart', preventEvent, true)
+    div.addEventListener('touchend', preventEvent, true)
+    div.addEventListener('touchmove', preventEvent, true)
+    div.addEventListener('wheel', preventEvent, true)
+    div.addEventListener('contextmenu', preventEvent, true)
 
     // Add fade-in animation
     const style = document.createElement("style")
@@ -841,6 +863,20 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
     modal.style.gap = "20px"
     modal.style.animation = "slideUp 0.4s ease-out"
     modal.style.backdropFilter = "blur(20px)"
+    modal.style.pointerEvents = "auto" // Ensure modal content is interactive
+
+    // Allow interactions within modal content but prevent bubbling
+    const allowModalEvent = (e: Event) => {
+        e.stopPropagation()
+    }
+
+    modal.addEventListener('click', allowModalEvent, true)
+    modal.addEventListener('mousedown', allowModalEvent, true)
+    modal.addEventListener('mouseup', allowModalEvent, true)
+    modal.addEventListener('pointerdown', allowModalEvent, true)
+    modal.addEventListener('pointerup', allowModalEvent, true)
+    modal.addEventListener('touchstart', allowModalEvent, true)
+    modal.addEventListener('touchend', allowModalEvent, true)
 
     // Header
     const header = document.createElement("div")
@@ -958,6 +994,7 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
     passwordInput.placeholder = "Enter your master password"
     passwordInput.required = true // Required for password manager detection
     passwordInput.minLength = 8 // Helps password managers understand requirements
+    passwordInput.autofocus = true // Auto-focus for better UX
     passwordInput.style.padding = "12px 16px"
     passwordInput.style.borderRadius = "8px"
     passwordInput.style.border = "1px solid rgba(255, 255, 255, 0.2)"
@@ -1259,6 +1296,20 @@ export function createPasswordExistingModal(payload: ModalPayload, onResult: (re
     modal.style.gap = "20px"
     modal.style.animation = "slideUp 0.4s ease-out"
     modal.style.backdropFilter = "blur(20px)"
+    modal.style.pointerEvents = "auto" // Ensure modal content is interactive
+
+    // Allow interactions within modal content but prevent bubbling
+    const allowModalEvent = (e: Event) => {
+        e.stopPropagation()
+    }
+
+    modal.addEventListener('click', allowModalEvent, true)
+    modal.addEventListener('mousedown', allowModalEvent, true)
+    modal.addEventListener('mouseup', allowModalEvent, true)
+    modal.addEventListener('pointerdown', allowModalEvent, true)
+    modal.addEventListener('pointerup', allowModalEvent, true)
+    modal.addEventListener('touchstart', allowModalEvent, true)
+    modal.addEventListener('touchend', allowModalEvent, true)
 
     // Header
     const header = document.createElement("div")
@@ -1377,6 +1428,7 @@ export function createPasswordExistingModal(payload: ModalPayload, onResult: (re
     passwordInput.autocomplete = "current-password"
     passwordInput.placeholder = "Enter your master password"
     passwordInput.required = true // Required for password manager detection
+    passwordInput.autofocus = true // Auto-focus for better UX
     passwordInput.style.padding = "12px 16px"
     passwordInput.style.borderRadius = "8px"
     passwordInput.style.border = "1px solid rgba(255, 255, 255, 0.2)"

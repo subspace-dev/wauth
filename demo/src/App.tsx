@@ -138,7 +138,11 @@ function App() {
   }, [connected])
 
   async function signTransaction() {
-    const ar = Arweave.init({})
+    const ar = Arweave.init({
+      host: "arweave.net",
+      port: 443,
+      protocol: "https"
+    })
 
     const dataUint8Array = new TextEncoder().encode(dataToSign)
     const transaction = await ar.createTransaction({

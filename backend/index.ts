@@ -12,7 +12,11 @@ import fs from "fs"
 import { createAoSigner } from "@ar.io/sdk"
 
 dotenv.config()
-const ar = Arweave.init({})
+const ar = Arweave.init({
+    host: "arweave.net",
+    port: 443,
+    protocol: "https"
+})
 
 // Generate RSA key pair for password encryption/decryption
 let serverKeyPair: CryptoKeyPair;

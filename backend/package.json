@@ -7,8 +7,8 @@
     "start:pocketbase": "bin/pocketbase serve --dir ./pb_data --dev",
     "start:backend": "bun run index.ts",
     "dev:backend": "bun run index.ts --watch",
-    "start": "concurrently \"bun run start:pocketbase\" \"bun run start:backend\"",
-    "dev": "concurrently \"bun run start:pocketbase\" \"bun run dev:backend\""
+    "start": "bash ./scripts/start.sh",
+    "dev": "bash ./scripts/dev.sh"
   },
   "devDependencies": {
     "@types/bun": "latest"
