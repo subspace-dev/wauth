@@ -7,7 +7,7 @@
     "backend": "cd backend && bun run start",
     "start": "cd backend && bun run start",
     "demo": "cd demo && bun run dev",
-    "dev": "concurrently \"cd backend && bun run dev\" \"cd sdk && npm run dev\" \"cd strategy && npm run dev\" \"cd demo && bun run dev\"",
+    "dev": "bash ./scripts/dev.sh",
     "build": "cd sdk; npm i; npm run build; cd ../strategy; npm i; npm run build; cd ../demo; bun i; bun run build; cp -r dist ..",
     "refresh": "cd sdk; npm run build; cd ../strategy; npm remove @wauth/sdk; rm -rf node_modules; npm i ../sdk; npm run build; cd ../demo; bun remove @wauth/strategy;rm -rf node_modules;bun i ../strategy;",
     "publish:sdk": "cd sdk && npm run publish-npm",
