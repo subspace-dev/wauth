@@ -866,7 +866,13 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
     modal.style.pointerEvents = "auto" // Ensure modal content is interactive
 
     // Allow interactions within modal content but prevent bubbling
+    // Don't interfere with input field interactions
     const allowModalEvent = (e: Event) => {
+        // Don't stop propagation for input-related events
+        const target = e.target as HTMLElement
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.tagName === 'BUTTON')) {
+            return
+        }
         e.stopPropagation()
     }
 
@@ -1299,7 +1305,13 @@ export function createPasswordExistingModal(payload: ModalPayload, onResult: (re
     modal.style.pointerEvents = "auto" // Ensure modal content is interactive
 
     // Allow interactions within modal content but prevent bubbling
+    // Don't interfere with input field interactions
     const allowModalEvent = (e: Event) => {
+        // Don't stop propagation for input-related events
+        const target = e.target as HTMLElement
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.tagName === 'BUTTON')) {
+            return
+        }
         e.stopPropagation()
     }
 
