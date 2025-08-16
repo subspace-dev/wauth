@@ -64,27 +64,35 @@ export class WAuth {
     private sessionPassword: string | null = null; // Store decrypted password in memory only
     private sessionKey: CryptoKey | null = null; // Key for local session encryption
     private sessionPasswordLoading: boolean = false; // Prevent multiple simultaneous loading attempts
+    private modalInProgress: boolean = false; // Prevent multiple modals from showing simultaneously
 
     private async initializeSessionKey(): Promise<CryptoKey> {
         if (this.sessionKey) return this.sessionKey;
 
         // Try to load existing session key
-        const storedKey = sessionStorage.getItem('wauth_session_key');
+        const storedKey = localStorage.getItem('wauth_session_key');
         if (storedKey) {
             try {
                 const keyData = JSON.parse(storedKey);
+                // Check if the key has expired (3 hours)
+                if (keyData.timestamp && Date.now() - keyData.timestamp > 3 * 60 * 60 * 1000) {
+                    // Key has expired, remove it
+                    localStorage.removeItem('wauth_session_key');
+                    localStorage.removeItem('wauth_encrypted_password');
+                    throw new Error('Session key expired');
+                }
                 this.sessionKey = await crypto.subtle.importKey(
                     'jwk',
-                    keyData,
+                    keyData.key,
                     { name: 'AES-GCM' },
                     false,
                     ['encrypt', 'decrypt']
                 );
                 return this.sessionKey;
             } catch (error) {
-                // If key loading fails, generate a new one
-                sessionStorage.removeItem('wauth_session_key');
-                sessionStorage.removeItem('wauth_encrypted_password');
+                // If key loading fails or is expired, generate a new one
+                localStorage.removeItem('wauth_session_key');
+                localStorage.removeItem('wauth_encrypted_password');
             }
         }
 
@@ -95,9 +103,13 @@ export class WAuth {
             ['encrypt', 'decrypt']
         );
 
-        // Store the key for the session
+        // Store the key with timestamp
         const exportedKey = await crypto.subtle.exportKey('jwk', this.sessionKey);
-        sessionStorage.setItem('wauth_session_key', JSON.stringify(exportedKey));
+        const keyData = {
+            key: exportedKey,
+            timestamp: Date.now()
+        };
+        localStorage.setItem('wauth_session_key', JSON.stringify(keyData));
 
         return this.sessionKey;
     }
@@ -119,13 +131,14 @@ export class WAuth {
                 data
             );
 
-            // Store encrypted password with IV
+            // Store encrypted password with IV and timestamp
             const encryptedData = {
                 encrypted: Array.from(new Uint8Array(encrypted)),
-                iv: Array.from(iv)
+                iv: Array.from(iv),
+                timestamp: Date.now()
             };
 
-            sessionStorage.setItem('wauth_encrypted_password', JSON.stringify(encryptedData));
+            localStorage.setItem('wauth_encrypted_password', JSON.stringify(encryptedData));
         } catch (error) {
             wauthLogger.simple('error', 'Failed to store password in session', error);
         }
@@ -134,21 +147,56 @@ export class WAuth {
     public hasSessionStorageData(): boolean {
         if (typeof window === 'undefined') return false;
 
-        const hasEncryptedPassword = sessionStorage.getItem('wauth_encrypted_password') !== null;
-        const hasSessionKey = sessionStorage.getItem('wauth_session_key') !== null;
+        const hasEncryptedPassword = localStorage.getItem('wauth_encrypted_password') !== null;
+        const hasSessionKey = localStorage.getItem('wauth_session_key') !== null;
 
-        return hasEncryptedPassword && hasSessionKey;
+        // Check if data exists and is not expired
+        if (hasEncryptedPassword && hasSessionKey) {
+            try {
+                const keyData = JSON.parse(localStorage.getItem('wauth_session_key')!);
+                const passwordData = JSON.parse(localStorage.getItem('wauth_encrypted_password')!);
+
+                const keyExpired = keyData.timestamp && Date.now() - keyData.timestamp > 3 * 60 * 60 * 1000;
+                const passwordExpired = passwordData.timestamp && Date.now() - passwordData.timestamp > 3 * 60 * 60 * 1000;
+
+                if (keyExpired || passwordExpired) {
+                    // Clear expired data
+                    localStorage.removeItem('wauth_session_key');
+                    localStorage.removeItem('wauth_encrypted_password');
+                    return false;
+                }
+
+                return true;
+            } catch (error) {
+                // If there's any error parsing the data, consider it invalid
+                localStorage.removeItem('wauth_session_key');
+                localStorage.removeItem('wauth_encrypted_password');
+                return false;
+            }
+        }
+
+        return false;
     }
 
     private async loadPasswordFromSession(): Promise<string | null> {
         if (typeof window === 'undefined') return null;
 
         try {
-            const storedData = sessionStorage.getItem('wauth_encrypted_password');
+            const storedData = localStorage.getItem('wauth_encrypted_password');
             if (!storedData) return null;
 
-            const { encrypted, iv } = JSON.parse(storedData);
+            const { encrypted, iv, timestamp } = JSON.parse(storedData);
+
+            // Check if password data has expired (3 hours)
+            if (timestamp && Date.now() - timestamp > 3 * 60 * 60 * 1000) {
+                wauthLogger.simple('info', 'Stored password has expired');
+                localStorage.removeItem('wauth_encrypted_password');
+                localStorage.removeItem('wauth_session_key');
+                return null;
+            }
+
             const sessionKey = await this.initializeSessionKey();
+            // If initializeSessionKey didn't throw (which it would if expired), proceed with decryption
 
             const decrypted = await crypto.subtle.decrypt(
                 { name: 'AES-GCM', iv: new Uint8Array(iv) },
@@ -161,15 +209,16 @@ export class WAuth {
         } catch (error) {
             wauthLogger.simple('error', 'Failed to load password from session', error);
             // Clear invalid data
-            sessionStorage.removeItem('wauth_encrypted_password');
+            localStorage.removeItem('wauth_encrypted_password');
+            localStorage.removeItem('wauth_session_key');
             return null;
         }
     }
 
     private clearSessionPassword(): void {
         if (typeof window !== 'undefined') {
-            sessionStorage.removeItem('wauth_encrypted_password');
-            sessionStorage.removeItem('wauth_session_key');
+            localStorage.removeItem('wauth_encrypted_password');
+            localStorage.removeItem('wauth_session_key');
         }
         this.sessionPassword = null;
         this.sessionKey = null;
@@ -421,6 +470,19 @@ export class WAuth {
     //    or when they already have an account and just logging in (ask for password),
     //    this will be send in an encrypted way to the backend for use with decoding JWK
     public async createModal(type: ModalTypes, payload: ModalPayload = {}, callback: (result: ModalResult) => void) {
+        // Prevent multiple modals from showing simultaneously
+        if (this.modalInProgress) {
+            wauthLogger.simple('warn', 'Modal already in progress, ignoring new modal request');
+            return;
+        }
+        this.modalInProgress = true;
+
+        // Create a wrapped callback that cleans up the modal flag
+        const wrappedCallback = (result: ModalResult) => {
+            this.modalInProgress = false;
+            callback(result);
+        };
+
         // if type is confirm-tx, check payload.transaction or payload.dataItem and tell the user that some tokens are being transferred and its details, and ask for confirmation
         // if type is password-new, ask for password and confirm password
         // if type is password-existing, ask for password and return it
@@ -434,7 +496,7 @@ export class WAuth {
             if (container.parentNode) {
                 container.parentNode.removeChild(container)
             }
-            callback(result)
+            wrappedCallback(result)
         })
         container.appendChild(modal)
 
@@ -661,8 +723,8 @@ export class WAuth {
                 this.sessionPassword = result.password;
                 await this.storePasswordInSession(result.password);
 
-                // Create new wallet
-                this.wallet = await this.getWallet();
+                // Create new wallet - pass false to prevent getWallet from showing password modal
+                this.wallet = await this.getWallet(false);
             }
 
             if (!this.wallet) {
@@ -839,7 +901,7 @@ export class WAuth {
         }
 
         // Wait for session password to be loaded if it's not available yet
-        if (!this.sessionPassword && !this.sessionPasswordLoading) {
+        if (!this.sessionPassword && !this.sessionPasswordLoading && showPasswordModal) {
             this.sessionPasswordLoading = true;
             try {
                 // Check if session storage data exists first

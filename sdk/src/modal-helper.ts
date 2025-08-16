@@ -140,7 +140,15 @@ function restoreFocus() {
 }
 
 export function createModalContainer() {
-    const div = document.createElement("div")
+    // Check for existing modal container
+    let div = document.getElementById("modal-container");
+    if (div) {
+        // If a container exists, remove it first
+        div.parentNode?.removeChild(div);
+    }
+
+    // Create new container
+    div = document.createElement("div")
     div.id = "modal-container"
     div.style.fontFamily = "'Inter', sans-serif"
     div.style.position = "fixed"
@@ -230,6 +238,12 @@ export function createModalContainer() {
 export function createModal(type: ModalTypes, payload: ModalPayload, onResult: (result: ModalResult) => void): HTMLDivElement {
     let modal: HTMLDivElement;
     let cleanupFocus: () => void;
+
+    // Remove any existing modal content
+    const existingModal = document.getElementById("modal-content");
+    if (existingModal) {
+        existingModal.parentNode?.removeChild(existingModal);
+    }
 
     // Create wrapper that handles cleanup AFTER the original callback
     const wrappedOnResult = (result: ModalResult) => {
