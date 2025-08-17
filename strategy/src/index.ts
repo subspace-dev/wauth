@@ -56,7 +56,8 @@ export default class WAuthStrategy implements Strategy {
             removeAddressEvent: this.removeAddressEvent,
             getActivePublicKey: this.getActivePublicKey,
             getConnectedWallets: this.getConnectedWallets,
-            removeConnectedWallet: this.removeConnectedWallet
+            removeConnectedWallet: this.removeConnectedWallet,
+            getEmail: this.getEmail
         }
     }
 
@@ -220,6 +221,10 @@ export default class WAuthStrategy implements Strategy {
             const dataItem = new DataItem(Buffer.from(signedDataItem.raw))
             return { id: dataItem.id, raw: dataItem.getRaw() }
         }
+    }
+
+    public getEmail(): { email: string, verified: boolean } {
+        return this.walletRef.getEmail()
     }
 }
 

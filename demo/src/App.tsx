@@ -10,6 +10,7 @@ function App() {
   const api = useApi()
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [email, setEmail] = useState<string | null>(null)
+  const [emailVerified, setEmailVerified] = useState<boolean | null>(null)
   const [connectedWallets, setConnectedWallets] = useState<any[]>([])
   const [isLoadingWallets, setIsLoadingWallets] = useState(false)
   const [isAddingWallet, setIsAddingWallet] = useState(false)
@@ -53,6 +54,7 @@ function App() {
     console.log("[app] auth data changed", data)
     setAccessToken(data.accessToken)
     setEmail(data.email)
+    setEmailVerified(data.verified || false)
   })
 
   // Function to fetch connected wallets
@@ -134,6 +136,8 @@ function App() {
     } else {
       // Fetch connected wallets when user connects
       fetchConnectedWallets()
+      // Also fetch email when user connects
+      // fetchEmail() // This function is removed
     }
   }, [connected])
 
@@ -268,7 +272,14 @@ function App() {
               <h3 className="card-title">🔐 Authentication Data</h3>
               <div className="info-item">
                 <span className="label">Email:</span>
-                <span className="value">{email || "Not available"}</span>
+                <div className="email-section">
+                  <span className="value">{email || "Not available"}</span>
+                  {emailVerified !== null && email && (
+                    <span className={`verification-status ${emailVerified ? 'verified' : 'unverified'}`}>
+                      {emailVerified ? '✓ Verified' : '⚠ Unverified'}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="info-item">
                 <span className="label">Access Token:</span>

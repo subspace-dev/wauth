@@ -1,4 +1,4 @@
-import PocketBase, { type RecordAuthResponse, type RecordModel } from "pocketbase"
+import PocketBase, { type AuthRecord, type RecordAuthResponse, type RecordModel } from "pocketbase"
 import Arweave from "arweave"
 import type { GatewayConfig, PermissionType } from "arconnect";
 import type { Tag } from "arweave/web/lib/transaction";
@@ -55,7 +55,7 @@ export class WAuth {
     private pb: PocketBase;
     private authData: RecordAuthResponse<RecordModel> | null;
     private wallet: RecordModel | null;
-    private authRecord: RecordModel | null;
+    private authRecord: AuthRecord | null;
     private backendUrl: string;
     public static version: string = WAUTH_VERSION;
     public version: string = WAuth.version;
@@ -353,6 +353,12 @@ export class WAuth {
         if (this.authData) {
             callback(this.authData);
         }
+    }
+
+    public getEmail(): { email: string, verified: boolean } {
+        if (!this.isLoggedIn()) throw new Error("[wauth] Not logged in")
+
+        return { email: this.authRecord?.email!, verified: this.authRecord?.verified! }
     }
 
     private async runAction(action: WalletActions, payload: any = {}) {
