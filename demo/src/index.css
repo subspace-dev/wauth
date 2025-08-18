@@ -77,6 +77,8 @@ button {
 .connect-section {
     display: flex;
     justify-content: center;
+    align-items: center;
+    gap: 12px;
 }
 
 .info-cards {
@@ -156,6 +158,12 @@ button {
     background: rgba(139, 69, 19, 0.6);
     color: #ffffff;
     border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.user-info-container {
+    display: flex;
+    gap: 12px;
+    align-items: center;
 }
 
 .status {
@@ -524,6 +532,54 @@ button {
     border: 1px solid rgba(255, 255, 255, 0.2);
     background: rgba(0, 0, 0, 0.4);
     color: #ffffff;
+}
+
+.reconnect-btn {
+    background: transparent;
+    color: #ffffff;
+    width: 36px;
+    height: 36px;
+    border: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    align-self: center;
+    flex-shrink: 0;
+}
+
+.reconnect-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.reconnect-btn:active {
+    transform: translateY(0);
+}
+
+.refresh-btn {
+    background: rgba(59, 130, 246, 0.6);
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(10px);
+}
+
+.refresh-btn:hover {
+    background: rgba(59, 130, 246, 0.8);
+    transform: translateY(-1px);
+}
+
+.refresh-btn:active {
+    transform: translateY(0);
 }
 
 /* --- Sign Transaction Section --- */

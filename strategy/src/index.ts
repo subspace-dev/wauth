@@ -226,6 +226,10 @@ export default class WAuthStrategy implements Strategy {
     public getEmail(): { email: string, verified: boolean } {
         return this.walletRef.getEmail()
     }
+
+    public getUsername(): string | null {
+        return this.walletRef.getUsername()
+    }
 }
 
 function shouldDisconnect(address: string | undefined, connected: boolean) {

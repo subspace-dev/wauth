@@ -22,7 +22,8 @@ function App() {
   const [aoMsgId, setAoMsgId] = useState<string | null>(null)
   const [signatureInput, setSignatureInput] = useState<string | null>(null)
   const [signatureOutput, setSignatureOutput] = useState<string | null>(null)
-
+  const [name, setName] = useState<string | null>(null)
+  const [username, setUsername] = useState<string | null>(null)
   // Token transfer states
   const [tokenProcessId, setTokenProcessId] = useState<string>("0syT13r0s0tgPmIed95bJnuSqaD29HQNN8D3ElLSrsc")
   const [transferQuantity, setTransferQuantity] = useState<string>("1")
@@ -129,17 +130,26 @@ function App() {
   useEffect(() => fixConnection(address, connected, disconnect), [address, connected, disconnect])
 
   useEffect(() => {
-    if (!connected) {
+    if (!connected || !address) {
       setAccessToken(null)
       setEmail(null)
       setConnectedWallets([])
+      setUsername(null)
+      setName(null)
     } else {
       // Fetch connected wallets when user connects
       fetchConnectedWallets()
       // Also fetch email when user connects
-      // fetchEmail() // This function is removed
+      const email = api.getEmail()
+      setEmail(email?.email || "?")
+      setEmailVerified(email?.verified || false)
+      const username = api.getUsername()
+      setUsername(username || "?")
+      const authData = api.getAuthData()
+      console.log("authData", authData)
+      setName(authData?.record?.name || "?")
     }
-  }, [connected])
+  }, [connected, address, api])
 
   async function signTransaction() {
     const ar = Arweave.init({
@@ -251,6 +261,7 @@ function App() {
         <main className="main">
           <div className="connect-section">
             <ConnectButton />
+            {connected && <button className="reconnect-btn" onClick={() => api.reconnect()}>🔄</button>}
           </div>
 
           <div className="info-cards">
@@ -271,14 +282,11 @@ function App() {
             <div className="card">
               <h3 className="card-title">🔐 Authentication Data</h3>
               <div className="info-item">
-                <span className="label">Email:</span>
-                <div className="email-section">
+                <span className="label">User Info:</span>
+                <div className="user-info-container">
                   <span className="value">{email || "Not available"}</span>
-                  {emailVerified !== null && email && (
-                    <span className={`verification-status ${emailVerified ? 'verified' : 'unverified'}`}>
-                      {emailVerified ? '✓ Verified' : '⚠ Unverified'}
-                    </span>
-                  )}
+                  <span className="value">{username || "Not available"}</span>
+                  <span className="value">{name || "Not available"}</span>
                 </div>
               </div>
               <div className="info-item">

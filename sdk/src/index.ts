@@ -294,10 +294,10 @@ export class WAuth {
                 try {
                     // Try to restore the auth state
                     const authData = JSON.parse(existingAuth);
-                    if (authData && authData.token && authData.model) {
+                    if (authData && authData.token && authData.record) {
                         // Set the auth data in PocketBase
-                        this.pb.authStore.save(authData.token, authData.model);
-                        wauthLogger.sessionUpdate('Restored', { userId: authData.model?.id });
+                        this.pb.authStore.save(authData.token, authData.record);
+                        wauthLogger.sessionUpdate('Restored', { userId: authData.record?.id });
                     } else {
                         wauthLogger.simple('warn', 'Existing auth data found but invalid format');
                     }
@@ -318,6 +318,11 @@ export class WAuth {
                     if (this.isLoggedIn()) {
                         try {
                             this.wallet = await this.getWallet();
+                            const authData = await this.pb.collection("users").authRefresh()
+                            this.authData = authData
+                            this.authRecord = authData.record
+                            console.log("authData", this.authData)
+                            console.log("authRecord", this.authRecord)
                         } catch (error) {
                             wauthLogger.simple('warn', 'Could not load wallet after session restore', error);
                         }
@@ -1146,6 +1151,16 @@ export class WAuth {
     getAuthRecord() {
         if (!this.isLoggedIn()) return null;
         return this.authRecord
+    }
+
+    getUsername(): string | null {
+        if (!this.isLoggedIn()) return null;
+        const authData = this.getAuthData()
+        const username = authData?.meta?.username || null;
+        if (!username) {
+            console.warn("Username not found in auth data, refresh authentication")
+        }
+        return username
     }
 
     pocketbase() {
