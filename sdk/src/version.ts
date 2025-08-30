@@ -1,1 +1,1 @@
-export const WAUTH_VERSION = "0.0.15";
+export const WAUTH_VERSION = "0.0.16";

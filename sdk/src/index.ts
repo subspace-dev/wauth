@@ -49,8 +49,8 @@ export type { ModalResult }
 export class WAuth {
     static devUrl = "http://localhost:8090"
     static devBackendUrl = "http://localhost:8091"
-    static prodUrl = "https://wauth.arnode.asia"
-    static prodBackendUrl = "https://wauth-backend.arnode.asia"
+    static prodUrl = "https://wauth.arweave.tech"
+    static prodBackendUrl = "https://wauth-backend.arweave.tech"
 
     private pb: PocketBase;
     private authData: RecordAuthResponse<RecordModel> | null;
