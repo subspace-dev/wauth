@@ -624,6 +624,13 @@ export class WAuth {
     public async connect({ provider, scopes }: { provider: WAuthProviders, scopes?: string[] }) {
         if (!Object.values(WAuthProviders).includes(provider)) throw new Error(`Invalid provider: ${provider}. Valid providers are: ${Object.values(WAuthProviders).join(", ")}`)
 
+        if (provider === WAuthProviders.Github) {
+            // add scope user:email if not already in scopes
+            if (!scopes?.includes("user:email")) {
+                scopes?.push("user:email")
+            }
+        }
+
         wauthLogger.authStart('OAuth Authentication', provider, { provider, scopes });
 
         try {
