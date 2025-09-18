@@ -138,14 +138,24 @@ bun run vite build
 git checkout tsconfig.app.json
 cd - > /dev/null
 
+# Step 6: Copy demo dist to root
+print_step "Step 6: Copying demo dist to root"
+if [ -d "dist" ]; then
+    rm -rf "dist"
+    print_success "Removed existing dist folder from root"
+fi
+cp -r "demo/dist" "."
+print_success "Copied demo/dist to root directory"
+
 print_success "🎉 WAuth Project Build Complete!"
 echo ""
 echo "Build Summary:"
 echo "  ✅ SDK built and ready"
 echo "  ✅ Strategy built with SDK dependency"
 echo "  ✅ Demo built and ready for deployment"
+echo "  ✅ Demo dist copied to root directory"
 echo ""
-echo "Demo is ready for deployment from: demo/dist/"
+echo "Demo is ready for deployment from: demo/dist/ and root/dist/"
 echo ""
 echo "For development mode, run:"
 echo "  cd demo && bun run dev"
