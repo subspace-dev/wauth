@@ -27,7 +27,7 @@ export default function Main() {
         name: "WAuth Demo",
         logo: "4R-dRRMdFerUnt8HuQzWT48ktgKsgjQ0uH6zlMFXVw",
       },
-      strategies: strategies as Strategy[],
+      strategies: strategies as unknown as Strategy[],
       permissions: ["ACCESS_ADDRESS", "SIGN_TRANSACTION"]
     }}
 

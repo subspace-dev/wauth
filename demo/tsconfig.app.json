@@ -29,5 +29,5 @@
       "@wauth/sdk": ["../sdk/src/index.ts"],
     }
   },
-  "include": ["src", "../strategy/src", "../sdk/src"]
+  "include": ["src"]
 }
