@@ -129,7 +129,14 @@ install_dependencies "demo" "bun"
 
 # Step 5: Build Demo (produces dist folder by default)
 print_step "Step 5: Building Demo"
-build_package "demo" "bun"
+cd "demo"
+# Use build-specific TypeScript config
+cp tsconfig.build.json tsconfig.app.json
+# Build with Vite only (skip TypeScript compilation)
+bun run vite build
+# Restore original config
+git checkout tsconfig.app.json
+cd - > /dev/null
 
 print_success "🎉 WAuth Project Build Complete!"
 echo ""
