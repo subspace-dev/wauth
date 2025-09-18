@@ -630,6 +630,7 @@ export class WAuth {
                 scopes?.push("user:email")
             }
         }
+        console.log("scopes", scopes)
 
         wauthLogger.authStart('OAuth Authentication', provider, { provider, scopes });
 

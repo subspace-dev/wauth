@@ -83,7 +83,7 @@ export default class WAuthStrategy implements Strategy {
         if (permissions) {
             console.warn("WAuth does not support custom permissions")
         }
-        console.log("scopes", this.scopes)
+        // console.log("scopes", this.scopes)
         const data = await this.walletRef.connect({ provider: this.provider, scopes: this.scopes })
         if (data) {
             this.authData = data?.meta
