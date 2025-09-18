@@ -50,6 +50,8 @@
     "@types/node": "^24.0.7",
     "arconnect": "^1.0.4",
     "arweave": "^2.0.0-ec.1",
+    "formidable": "^3.5.4",
+    "superagent": "^10.2.3",
     "typescript": "^5.8.3"
   }
 }

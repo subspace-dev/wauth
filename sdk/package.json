@@ -55,6 +55,8 @@
     "arconnect": "^1.0.4",
     "arweave": "^2.0.0-ec.1",
     "axios": "^1.10.0",
+    "formidable": "^3.5.4",
+    "superagent": "^10.2.3",
     "vite-plugin-node-polyfills": "^0.24.0"
   }
 }
