@@ -127,16 +127,18 @@ print_step "Step 4: Installing Dependencies in Demo"
 clean_dependencies "demo"
 install_dependencies "demo" "bun"
 
-# Note: Demo build is skipped as it uses direct source imports for development
-print_warning "Demo build skipped - uses direct source imports for development"
-print_step "To run the demo in development mode: cd demo && bun run dev"
+# Step 5: Build Demo (produces dist folder by default)
+print_step "Step 5: Building Demo"
+build_package "demo" "bun"
 
 print_success "🎉 WAuth Project Build Complete!"
 echo ""
 echo "Build Summary:"
 echo "  ✅ SDK built and ready"
 echo "  ✅ Strategy built with SDK dependency"
-echo "  ✅ Demo built with Strategy and SDK dependencies"
+echo "  ✅ Demo built and ready for deployment"
 echo ""
-echo "You can now run the demo with:"
+echo "Demo is ready for deployment from: demo/dist/"
+echo ""
+echo "For development mode, run:"
 echo "  cd demo && bun run dev"
