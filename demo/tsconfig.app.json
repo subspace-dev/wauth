@@ -20,7 +20,14 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": false,
-    "noUncheckedSideEffectImports": false
+    "noUncheckedSideEffectImports": false,
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@wauth/strategy": ["../strategy/src/index.ts"],
+      "@wauth/sdk": ["../sdk/src/index.ts"],
+    }
   },
-  "include": ["src"]
+  "include": ["src", "../strategy/src", "../sdk/src"]
 }

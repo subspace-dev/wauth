@@ -1007,109 +1007,149 @@ export function createConfirmTxModal(payload: ModalPayload, onResult: (result: M
 }
 
 export function createPasswordNewModal(payload: ModalPayload, onResult: (result: ModalResult) => void): HTMLDivElement {
-    // Modal card (content only, container handled by index.ts) - Responsive design
+    // Minimal Modal card (content only, container handled by index.ts)
     const modal = document.createElement("div")
     modal.id = "modal-content"
-    modal.style.background = "linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%)"
-    modal.style.padding = "clamp(16px, 5vw, 24px)" // Responsive padding
-    modal.style.width = "min(400px, calc(100vw - 32px))" // Responsive width with proper margins
-    modal.style.maxHeight = "calc(100vh - 32px)" // Account for margins on both sides
+    modal.style.background = "#1a1a1a"
+    modal.style.padding = "24px"
+    modal.style.width = "min(380px, calc(100vw - 32px))"
+    modal.style.maxHeight = "calc(100vh - 32px)"
     modal.style.overflowY = "auto"
-    modal.style.borderRadius = "clamp(12px, 3vw, 20px)" // Responsive border radius
+    modal.style.borderRadius = "12px"
     modal.style.border = "1px solid rgba(255, 255, 255, 0.1)"
-    modal.style.boxShadow = "0 20px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05)"
+    modal.style.boxShadow = "0 8px 32px rgba(0, 0, 0, 0.5)"
     modal.style.position = "relative"
     modal.style.display = "flex"
     modal.style.flexDirection = "column"
-    modal.style.gap = "clamp(16px, 4vw, 24px)" // Responsive gap
-    modal.style.animation = "slideUp 0.4s ease-out"
-    modal.style.backdropFilter = "blur(20px)"
-    modal.style.pointerEvents = "auto" // Ensure modal content is interactive
-    modal.setAttribute('role', 'dialog') // Accessibility
-    modal.setAttribute('aria-modal', 'true') // Accessibility
+    modal.style.gap = "16px"
+    modal.style.animation = "slideUp 0.3s ease-out"
+    modal.style.pointerEvents = "auto"
+    modal.setAttribute('role', 'dialog')
+    modal.setAttribute('aria-modal', 'true')
 
     // Remove problematic event listeners that interfere with button clicks
     // These were preventing proper button interactions
 
-    // Header
+    // Minimal Header
     const header = document.createElement("div")
     header.className = "modal-header"
     header.style.textAlign = "center"
-    header.style.marginBottom = "10px"
+    header.style.marginBottom = "12px"
 
     const title = document.createElement("div")
     title.className = "modal-title"
-    title.textContent = "Create Master Password"
-    title.style.fontSize = "2rem"
-    title.style.fontWeight = "700"
-    title.style.letterSpacing = "-0.02em"
-    title.style.background = "linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%)"
-    title.style.backgroundClip = "text"
-    title.style.webkitBackgroundClip = "text"
-    title.style.webkitTextFillColor = "transparent"
-    title.style.marginBottom = "8px"
+    title.textContent = "Secure Your Wallet"
+    title.style.fontSize = "1.5rem"
+    title.style.fontWeight = "600"
+    title.style.color = "#ffffff"
+    title.style.marginBottom = "4px"
 
     const subtitle = document.createElement("div")
     subtitle.className = "modal-subtitle"
-    subtitle.textContent = "Secure your wallet with a strong password"
-    subtitle.style.fontSize = "0.95rem"
+    subtitle.textContent = "Choose how you'd like to secure your wallet"
+    subtitle.style.fontSize = "0.9rem"
     subtitle.style.color = "rgba(255, 255, 255, 0.7)"
-    subtitle.style.lineHeight = "1.5"
 
     header.appendChild(title)
     header.appendChild(subtitle)
     modal.appendChild(header)
 
-    // Warning section
-    const warning = document.createElement("div")
-    warning.className = "modal-warning"
-    warning.style.background = "rgba(255, 193, 7, 0.1)"
-    warning.style.border = "1px solid rgba(255, 193, 7, 0.3)"
-    warning.style.borderRadius = "12px"
-    warning.style.padding = "16px"
-    warning.style.margin = "0 0 20px 0"
-    warning.style.display = "flex"
-    warning.style.alignItems = "flex-start"
-    warning.style.gap = "12px"
+    // Initial options container
+    const optionsContainer = document.createElement("div")
+    optionsContainer.className = "modal-options"
+    optionsContainer.style.display = "flex"
+    optionsContainer.style.flexDirection = "column"
+    optionsContainer.style.gap = "12px"
+    optionsContainer.style.margin = "0 0 16px 0"
 
-    const warningIcon = document.createElement("div")
-    warningIcon.textContent = "⚠️"
-    warningIcon.style.fontSize = "1.2rem"
-    warningIcon.style.flexShrink = "0"
-    warningIcon.style.marginTop = "2px"
+    // Encrypt with password option
+    const encryptBtn = document.createElement("button")
+    encryptBtn.type = "button"
+    encryptBtn.className = "modal-btn modal-btn-primary"
+    encryptBtn.textContent = "Encrypt wallet with password"
+    encryptBtn.style.width = "100%"
+    encryptBtn.style.padding = "14px 0"
+    encryptBtn.style.border = "none"
+    encryptBtn.style.borderRadius = "8px"
+    encryptBtn.style.fontSize = "1rem"
+    encryptBtn.style.fontWeight = "600"
+    encryptBtn.style.cursor = "pointer"
+    encryptBtn.style.transition = "all 0.2s ease"
+    encryptBtn.style.background = "#6c63ff"
+    encryptBtn.style.color = "#fff"
 
-    const warningContent = document.createElement("div")
-    warningContent.style.flex = "1"
+    encryptBtn.onmouseover = () => {
+        encryptBtn.style.background = "#7f6fff"
+    }
+    encryptBtn.onmouseleave = () => {
+        encryptBtn.style.background = "#6c63ff"
+    }
 
-    const warningTitle = document.createElement("div")
-    warningTitle.textContent = "Important: Store Your Password Safely"
-    warningTitle.style.fontSize = "0.95rem"
-    warningTitle.style.fontWeight = "600"
-    warningTitle.style.color = "#ffc107"
-    warningTitle.style.marginBottom = "6px"
+    // Use without password option
+    const noPasswordBtn = document.createElement("button")
+    noPasswordBtn.type = "button"
+    noPasswordBtn.className = "modal-btn modal-btn-secondary"
+    noPasswordBtn.textContent = "Don't use password"
+    noPasswordBtn.style.width = "100%"
+    noPasswordBtn.style.padding = "14px 0"
+    noPasswordBtn.style.border = "1px solid rgba(255, 255, 255, 0.2)"
+    noPasswordBtn.style.borderRadius = "8px"
+    noPasswordBtn.style.fontSize = "1rem"
+    noPasswordBtn.style.fontWeight = "600"
+    noPasswordBtn.style.cursor = "pointer"
+    noPasswordBtn.style.transition = "all 0.2s ease"
+    noPasswordBtn.style.background = "rgba(255, 255, 255, 0.05)"
+    noPasswordBtn.style.color = "rgba(255, 255, 255, 0.8)"
 
-    const warningText = document.createElement("div")
-    warningText.textContent = "Save this password in a password manager or secure location. If you forget your master password, you will permanently lose access to your wallet and funds. There is no password recovery option."
-    warningText.style.fontSize = "0.85rem"
-    warningText.style.color = "rgba(255, 255, 255, 0.8)"
-    warningText.style.lineHeight = "1.4"
+    noPasswordBtn.onmouseover = () => {
+        noPasswordBtn.style.background = "rgba(255, 255, 255, 0.1)"
+        noPasswordBtn.style.color = "#ffffff"
+        noPasswordBtn.style.borderColor = "rgba(255, 255, 255, 0.3)"
+    }
+    noPasswordBtn.onmouseleave = () => {
+        noPasswordBtn.style.background = "rgba(255, 255, 255, 0.05)"
+        noPasswordBtn.style.color = "rgba(255, 255, 255, 0.8)"
+        noPasswordBtn.style.borderColor = "rgba(255, 255, 255, 0.2)"
+    }
 
-    warningContent.appendChild(warningTitle)
-    warningContent.appendChild(warningText)
-    warning.appendChild(warningIcon)
-    warning.appendChild(warningContent)
-    modal.appendChild(warning)
+    // Event handlers for initial options
+    encryptBtn.onclick = () => {
+        // Hide initial options and show password form
+        optionsContainer.style.display = "none"
+        form.style.display = "flex"
+        warning.style.display = "block"
+        strengthContainer.style.display = "flex"
+        actions.style.display = "flex"
 
-    // Form container - use actual form element for password manager support
+        // Update title and subtitle
+        title.textContent = "Create Master Password"
+        subtitle.textContent = "Enter a strong password to encrypt your wallet"
+
+        // Focus on password input
+        setTimeout(() => {
+            passwordInput.focus()
+        }, 100)
+    }
+
+    noPasswordBtn.onclick = () => {
+        // Skip password and proceed with unencrypted wallet
+        onResult({ proceed: true, skipPassword: true })
+    }
+
+    optionsContainer.appendChild(encryptBtn)
+    optionsContainer.appendChild(noPasswordBtn)
+    modal.appendChild(optionsContainer)
+
+    // Password form container (initially hidden)
     const form = document.createElement("form")
     form.className = "modal-form"
-    form.action = "#" // Required for password manager detection
-    form.method = "post" // Required for password manager detection
-    form.style.display = "flex"
+    form.action = "#"
+    form.method = "post"
+    form.style.display = "none" // Initially hidden
     form.style.flexDirection = "column"
-    form.style.gap = "16px"
+    form.style.gap = "12px"
     form.autocomplete = "on"
-    form.onsubmit = (e) => e.preventDefault() // Prevent actual form submission
+    form.onsubmit = (e) => e.preventDefault()
 
     // Hidden username field to help password managers understand context
     const hiddenUsernameInput = document.createElement("input")
@@ -1137,37 +1177,73 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
     passwordLabel.htmlFor = "new-password"
     passwordLabel.style.fontSize = "0.9rem"
     passwordLabel.style.color = "rgba(255, 255, 255, 0.8)"
-    passwordLabel.style.fontWeight = "600"
+    passwordLabel.style.fontWeight = "500"
+
+    const passwordInputWrapper = document.createElement("div")
+    passwordInputWrapper.style.position = "relative"
+    passwordInputWrapper.style.display = "flex"
+    passwordInputWrapper.style.alignItems = "center"
 
     const passwordInput = document.createElement("input")
     passwordInput.type = "password"
     passwordInput.name = "password"
     passwordInput.id = "new-password"
     passwordInput.autocomplete = "new-password"
-    passwordInput.placeholder = "Enter your master password"
-    passwordInput.required = true // Required for password manager detection
-    passwordInput.minLength = 8 // Helps password managers understand requirements
-    // Auto-focus handled by focus management system
+    passwordInput.placeholder = "Create a strong password"
+    passwordInput.required = true
+    passwordInput.minLength = 8
     passwordInput.style.padding = "12px 16px"
+    passwordInput.style.paddingRight = "40px"
     passwordInput.style.borderRadius = "8px"
     passwordInput.style.border = "1px solid rgba(255, 255, 255, 0.2)"
     passwordInput.style.background = "rgba(255, 255, 255, 0.05)"
     passwordInput.style.color = "#ffffff"
-    passwordInput.style.fontSize = "1rem"
+    passwordInput.style.fontSize = "0.95rem"
     passwordInput.style.outline = "none"
     passwordInput.style.transition = "all 0.2s ease"
+    passwordInput.style.width = "100%"
+
+    // Password visibility toggle
+    const toggleButton = document.createElement("button")
+    toggleButton.type = "button"
+    toggleButton.innerHTML = "👁"
+    toggleButton.style.position = "absolute"
+    toggleButton.style.right = "8px"
+    toggleButton.style.background = "none"
+    toggleButton.style.border = "none"
+    toggleButton.style.cursor = "pointer"
+    toggleButton.style.fontSize = "1rem"
+    toggleButton.style.opacity = "0.6"
+    toggleButton.style.padding = "4px"
+    toggleButton.style.borderRadius = "4px"
+
+    toggleButton.onmouseover = () => {
+        toggleButton.style.opacity = "1"
+    }
+    toggleButton.onmouseleave = () => {
+        toggleButton.style.opacity = "0.6"
+    }
+
+    let isPasswordVisible = false
+    toggleButton.onclick = () => {
+        isPasswordVisible = !isPasswordVisible
+        passwordInput.type = isPasswordVisible ? "text" : "password"
+        toggleButton.innerHTML = isPasswordVisible ? "🙈" : "👁"
+    }
 
     passwordInput.onfocus = () => {
         passwordInput.style.borderColor = "#6c63ff"
-        passwordInput.style.boxShadow = "0 0 0 2px rgba(108, 99, 255, 0.2)"
+        passwordInput.style.background = "rgba(255, 255, 255, 0.08)"
     }
     passwordInput.onblur = () => {
         passwordInput.style.borderColor = "rgba(255, 255, 255, 0.2)"
-        passwordInput.style.boxShadow = "none"
+        passwordInput.style.background = "rgba(255, 255, 255, 0.05)"
     }
 
+    passwordInputWrapper.appendChild(passwordInput)
+    passwordInputWrapper.appendChild(toggleButton)
     passwordContainer.appendChild(passwordLabel)
-    passwordContainer.appendChild(passwordInput)
+    passwordContainer.appendChild(passwordInputWrapper)
 
     // Confirm password input
     const confirmContainer = document.createElement("div")
@@ -1180,48 +1256,113 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
     confirmLabel.htmlFor = "confirm-password"
     confirmLabel.style.fontSize = "0.9rem"
     confirmLabel.style.color = "rgba(255, 255, 255, 0.8)"
-    confirmLabel.style.fontWeight = "600"
+    confirmLabel.style.fontWeight = "500"
+
+    const confirmInputWrapper = document.createElement("div")
+    confirmInputWrapper.style.position = "relative"
+    confirmInputWrapper.style.display = "flex"
+    confirmInputWrapper.style.alignItems = "center"
 
     const confirmInput = document.createElement("input")
     confirmInput.type = "password"
     confirmInput.name = "confirmPassword"
     confirmInput.id = "confirm-password"
     confirmInput.autocomplete = "new-password"
-    confirmInput.placeholder = "Confirm your master password"
-    confirmInput.required = true // Required for password manager detection
+    confirmInput.placeholder = "Confirm your password"
+    confirmInput.required = true
     confirmInput.style.padding = "12px 16px"
+    confirmInput.style.paddingRight = "40px"
     confirmInput.style.borderRadius = "8px"
     confirmInput.style.border = "1px solid rgba(255, 255, 255, 0.2)"
     confirmInput.style.background = "rgba(255, 255, 255, 0.05)"
     confirmInput.style.color = "#ffffff"
-    confirmInput.style.fontSize = "1rem"
+    confirmInput.style.fontSize = "0.95rem"
     confirmInput.style.outline = "none"
     confirmInput.style.transition = "all 0.2s ease"
+    confirmInput.style.width = "100%"
+
+    // Confirm password visibility toggle
+    const confirmToggleButton = document.createElement("button")
+    confirmToggleButton.type = "button"
+    confirmToggleButton.innerHTML = "👁"
+    confirmToggleButton.style.position = "absolute"
+    confirmToggleButton.style.right = "8px"
+    confirmToggleButton.style.background = "none"
+    confirmToggleButton.style.border = "none"
+    confirmToggleButton.style.cursor = "pointer"
+    confirmToggleButton.style.fontSize = "1rem"
+    confirmToggleButton.style.opacity = "0.6"
+    confirmToggleButton.style.padding = "4px"
+    confirmToggleButton.style.borderRadius = "4px"
+
+    confirmToggleButton.onmouseover = () => {
+        confirmToggleButton.style.opacity = "1"
+    }
+    confirmToggleButton.onmouseleave = () => {
+        confirmToggleButton.style.opacity = "0.6"
+    }
+
+    let isConfirmPasswordVisible = false
+    confirmToggleButton.onclick = () => {
+        isConfirmPasswordVisible = !isConfirmPasswordVisible
+        confirmInput.type = isConfirmPasswordVisible ? "text" : "password"
+        confirmToggleButton.innerHTML = isConfirmPasswordVisible ? "🙈" : "👁️"
+    }
 
     confirmInput.onfocus = () => {
         confirmInput.style.borderColor = "#6c63ff"
-        confirmInput.style.boxShadow = "0 0 0 2px rgba(108, 99, 255, 0.2)"
+        confirmInput.style.boxShadow = "0 0 0 4px rgba(108, 99, 255, 0.15)"
+        confirmInput.style.background = "rgba(255, 255, 255, 0.12)"
     }
     confirmInput.onblur = () => {
-        confirmInput.style.borderColor = "rgba(255, 255, 255, 0.2)"
+        confirmInput.style.borderColor = "rgba(255, 255, 255, 0.15)"
         confirmInput.style.boxShadow = "none"
+        confirmInput.style.background = "rgba(255, 255, 255, 0.08)"
     }
 
+    confirmInputWrapper.appendChild(confirmInput)
+    confirmInputWrapper.appendChild(confirmToggleButton)
     confirmContainer.appendChild(confirmLabel)
-    confirmContainer.appendChild(confirmInput)
+    confirmContainer.appendChild(confirmInputWrapper)
 
-    // Error message
+    // Enhanced Error message
     const errorMessage = document.createElement("div")
     errorMessage.className = "error-message"
     errorMessage.style.color = "#ff6b6b"
-    errorMessage.style.fontSize = "0.85rem"
+    errorMessage.style.fontSize = "0.9rem"
     errorMessage.style.textAlign = "center"
     errorMessage.style.display = "none"
-    errorMessage.style.padding = "8px"
-    errorMessage.style.background = "rgba(255, 107, 107, 0.1)"
-    errorMessage.style.borderRadius = "6px"
-    errorMessage.style.border = "1px solid rgba(255, 107, 107, 0.3)"
+    errorMessage.style.padding = "12px 16px"
+    errorMessage.style.background = "linear-gradient(135deg, rgba(255, 107, 107, 0.1) 0%, rgba(255, 107, 107, 0.15) 100%)"
+    errorMessage.style.borderRadius = "10px"
+    errorMessage.style.border = "1px solid rgba(255, 107, 107, 0.4)"
+    errorMessage.style.fontWeight = "600"
+    errorMessage.style.boxShadow = "0 2px 8px rgba(255, 107, 107, 0.2)"
+    errorMessage.style.position = "relative"
+    errorMessage.style.overflow = "hidden"
 
+    // Add error icon
+    const errorIcon = document.createElement("span")
+    errorIcon.textContent = "⚠️"
+    errorIcon.style.marginRight = "8px"
+    errorIcon.style.fontSize = "1rem"
+    errorMessage.appendChild(errorIcon)
+
+    // Warning section for password form
+    const warning = document.createElement("div")
+    warning.className = "modal-warning"
+    warning.style.background = "rgba(255, 193, 7, 0.1)"
+    warning.style.border = "1px solid rgba(255, 193, 7, 0.3)"
+    warning.style.borderRadius = "8px"
+    warning.style.padding = "12px"
+    warning.style.margin = "0 0 16px 0"
+    warning.style.fontSize = "0.85rem"
+    warning.style.color = "#ffc107"
+    warning.style.lineHeight = "1.4"
+    warning.textContent = "Store your password securely. If forgotten, you'll permanently lose access to your wallet."
+    warning.style.display = "none" // Initially hidden
+
+    form.appendChild(warning)
     form.appendChild(passwordContainer)
     form.appendChild(confirmContainer)
     form.appendChild(errorMessage)
@@ -1231,12 +1372,12 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
     const strengthContainer = document.createElement("div")
     strengthContainer.style.display = "flex"
     strengthContainer.style.flexDirection = "column"
-    strengthContainer.style.gap = "8px"
-    strengthContainer.style.margin = "-10px 0 10px 0"
+    strengthContainer.style.gap = "6px"
+    strengthContainer.style.margin = "0 0 12px 0"
 
     const strengthLabel = document.createElement("div")
     strengthLabel.textContent = "Password Strength:"
-    strengthLabel.style.fontSize = "0.85rem"
+    strengthLabel.style.fontSize = "0.8rem"
     strengthLabel.style.color = "rgba(255, 255, 255, 0.6)"
 
     const strengthBar = document.createElement("div")
@@ -1254,12 +1395,12 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
     strengthBar.appendChild(strengthFill)
     strengthContainer.appendChild(strengthLabel)
     strengthContainer.appendChild(strengthBar)
-    modal.appendChild(strengthContainer)
+    strengthContainer.style.display = "none" // Initially hidden
+    form.appendChild(strengthContainer)
 
     // Function to check password strength
     function checkPasswordStrength(password: string) {
         let score = 0
-        let feedback = ""
 
         if (password.length >= 8) score += 1
         if (password.length >= 12) score += 1
@@ -1272,12 +1413,13 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
         const labels = ["Very Weak", "Weak", "Fair", "Good", "Strong"]
 
         const strength = Math.min(Math.floor(score / 1.2), 4)
+        const percentage = (strength + 1) * 20
 
-        strengthFill.style.width = `${(strength + 1) * 20}%`
+        strengthFill.style.width = `${percentage}%`
         strengthFill.style.background = colors[strength]
         strengthLabel.textContent = `Password Strength: ${labels[strength]}`
 
-        return strength >= 2 // Require at least "Fair" strength
+        return strength >= 2
     }
 
     // Password input validation
@@ -1294,55 +1436,80 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
         }
     }
 
-    // Actions
+    // Actions section for password form
     const actions = document.createElement("div")
     actions.className = "modal-actions"
-    actions.style.display = "flex"
+    actions.style.display = "none" // Initially hidden
     actions.style.flexDirection = "column"
-    actions.style.gap = "10px"
-    actions.style.marginTop = "10px"
+    actions.style.gap = "8px"
+    actions.style.marginTop = "12px"
 
     const createBtn = document.createElement("button")
-    createBtn.type = "submit" // Important for password manager detection
+    createBtn.type = "submit"
     createBtn.className = "modal-btn modal-btn-primary"
     createBtn.textContent = "Create Wallet"
     createBtn.style.width = "100%"
-    createBtn.style.padding = "14px 0"
+    createBtn.style.padding = "12px 0"
     createBtn.style.border = "none"
-    createBtn.style.borderRadius = "12px"
+    createBtn.style.borderRadius = "8px"
     createBtn.style.fontSize = "1rem"
     createBtn.style.fontWeight = "600"
     createBtn.style.cursor = "pointer"
     createBtn.style.transition = "all 0.2s ease"
-    createBtn.style.background = "linear-gradient(135deg, #6c63ff 0%, #8b7fff 100%)"
+    createBtn.style.background = "#6c63ff"
     createBtn.style.color = "#fff"
-    createBtn.style.boxShadow = "0 4px 12px rgba(108, 99, 255, 0.4)"
 
     createBtn.onmouseover = () => {
-        createBtn.style.background = "linear-gradient(135deg, #7f6fff 0%, #9c8fff 100%)"
-        createBtn.style.transform = "translateY(-2px)"
-        createBtn.style.boxShadow = "0 6px 20px rgba(108, 99, 255, 0.5)"
+        createBtn.style.background = "#7f6fff"
     }
     createBtn.onmouseleave = () => {
-        createBtn.style.background = "linear-gradient(135deg, #6c63ff 0%, #8b7fff 100%)"
-        createBtn.style.transform = "translateY(0)"
-        createBtn.style.boxShadow = "0 4px 12px rgba(108, 99, 255, 0.4)"
+        createBtn.style.background = "#6c63ff"
+    }
+
+    const skipBtn = document.createElement("button")
+    skipBtn.type = "button"
+    skipBtn.className = "modal-btn modal-btn-skip"
+    skipBtn.textContent = "Don't use password"
+    skipBtn.style.width = "100%"
+    skipBtn.style.padding = "10px 0"
+    skipBtn.style.border = "1px solid rgba(255, 193, 7, 0.3)"
+    skipBtn.style.borderRadius = "8px"
+    skipBtn.style.fontSize = "0.9rem"
+    skipBtn.style.fontWeight = "500"
+    skipBtn.style.cursor = "pointer"
+    skipBtn.style.transition = "all 0.2s ease"
+    skipBtn.style.background = "rgba(255, 193, 7, 0.1)"
+    skipBtn.style.color = "#ffc107"
+
+    skipBtn.onmouseover = () => {
+        skipBtn.style.background = "rgba(255, 193, 7, 0.2)"
+        skipBtn.style.borderColor = "rgba(255, 193, 7, 0.5)"
+    }
+    skipBtn.onmouseleave = () => {
+        skipBtn.style.background = "rgba(255, 193, 7, 0.1)"
+        skipBtn.style.borderColor = "rgba(255, 193, 7, 0.3)"
+    }
+    skipBtn.onclick = () => {
+        console.log("[modal-helper] Skip password button clicked");
+        onResult({ proceed: true, skipPassword: true })
+    }
+    skipBtn.onmouseup = (e) => {
+        e.stopPropagation()
     }
 
     const cancelBtn = document.createElement("button")
     cancelBtn.className = "modal-btn modal-btn-secondary"
     cancelBtn.textContent = "Cancel"
     cancelBtn.style.width = "100%"
-    cancelBtn.style.padding = "12px 0"
+    cancelBtn.style.padding = "10px 0"
     cancelBtn.style.border = "1px solid rgba(255, 255, 255, 0.2)"
-    cancelBtn.style.borderRadius = "12px"
-    cancelBtn.style.fontSize = "1rem"
-    cancelBtn.style.fontWeight = "600"
+    cancelBtn.style.borderRadius = "8px"
+    cancelBtn.style.fontSize = "0.9rem"
+    cancelBtn.style.fontWeight = "500"
     cancelBtn.style.cursor = "pointer"
     cancelBtn.style.transition = "all 0.2s ease"
     cancelBtn.style.background = "rgba(255, 255, 255, 0.05)"
     cancelBtn.style.color = "rgba(255, 255, 255, 0.8)"
-    cancelBtn.style.backdropFilter = "blur(10px)"
 
     cancelBtn.onmouseover = () => {
         cancelBtn.style.background = "rgba(255, 255, 255, 0.1)"
@@ -1356,7 +1523,21 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
     }
     cancelBtn.onclick = () => {
         console.log("[modal-helper] Cancel button clicked");
-        onResult({ proceed: false })
+        // Go back to initial options
+        optionsContainer.style.display = "flex"
+        form.style.display = "none"
+        warning.style.display = "none"
+        strengthContainer.style.display = "none"
+        actions.style.display = "none"
+
+        // Reset title and subtitle
+        title.textContent = "Secure Your Wallet"
+        subtitle.textContent = "Choose how you'd like to secure your wallet"
+
+        // Clear form inputs
+        passwordInput.value = ""
+        confirmInput.value = ""
+        errorMessage.style.display = "none"
     }
     cancelBtn.onmouseup = (e) => {
         e.stopPropagation()
@@ -1430,8 +1611,7 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
 
     actions.appendChild(createBtn)
     actions.appendChild(cancelBtn)
-
-    modal.appendChild(actions)
+    form.appendChild(actions)
 
     // Focus handled by focus management system
 
@@ -1449,54 +1629,48 @@ export function createPasswordNewModal(payload: ModalPayload, onResult: (result:
 }
 
 export function createPasswordExistingModal(payload: ModalPayload, onResult: (result: ModalResult) => void): HTMLDivElement {
-    // Modal card (content only, container handled by index.ts) - Responsive design
+    // Minimal Modal card (content only, container handled by index.ts)
     const modal = document.createElement("div")
     modal.id = "modal-content"
-    modal.style.background = "linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%)"
-    modal.style.padding = "clamp(16px, 5vw, 24px)" // Responsive padding
-    modal.style.width = "min(400px, calc(100vw - 32px))" // Responsive width with proper margins
-    modal.style.maxHeight = "calc(100vh - 32px)" // Account for margins on both sides
+    modal.style.background = "#1a1a1a"
+    modal.style.padding = "24px"
+    modal.style.width = "min(380px, calc(100vw - 32px))"
+    modal.style.maxHeight = "calc(100vh - 32px)"
     modal.style.overflowY = "auto"
-    modal.style.borderRadius = "clamp(12px, 3vw, 20px)" // Responsive border radius
+    modal.style.borderRadius = "12px"
     modal.style.border = "1px solid rgba(255, 255, 255, 0.1)"
-    modal.style.boxShadow = "0 20px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05)"
+    modal.style.boxShadow = "0 8px 32px rgba(0, 0, 0, 0.5)"
     modal.style.position = "relative"
     modal.style.display = "flex"
     modal.style.flexDirection = "column"
-    modal.style.gap = "clamp(16px, 4vw, 24px)" // Responsive gap
-    modal.style.animation = "slideUp 0.4s ease-out"
-    modal.style.backdropFilter = "blur(20px)"
-    modal.style.pointerEvents = "auto" // Ensure modal content is interactive
-    modal.setAttribute('role', 'dialog') // Accessibility
-    modal.setAttribute('aria-modal', 'true') // Accessibility
+    modal.style.gap = "16px"
+    modal.style.animation = "slideUp 0.3s ease-out"
+    modal.style.pointerEvents = "auto"
+    modal.setAttribute('role', 'dialog')
+    modal.setAttribute('aria-modal', 'true')
 
     // Remove problematic event listeners that interfere with button clicks
     // These were preventing proper button interactions
 
-    // Header
+    // Minimal Header
     const header = document.createElement("div")
     header.className = "modal-header"
     header.style.textAlign = "center"
-    header.style.marginBottom = "10px"
+    header.style.marginBottom = "12px"
 
     const title = document.createElement("div")
     title.className = "modal-title"
     title.textContent = "Welcome Back"
-    title.style.fontSize = "2rem"
-    title.style.fontWeight = "700"
-    title.style.letterSpacing = "-0.02em"
-    title.style.background = "linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%)"
-    title.style.backgroundClip = "text"
-    title.style.webkitBackgroundClip = "text"
-    title.style.webkitTextFillColor = "transparent"
-    title.style.marginBottom = "8px"
+    title.style.fontSize = "1.5rem"
+    title.style.fontWeight = "600"
+    title.style.color = "#ffffff"
+    title.style.marginBottom = "4px"
 
     const subtitle = document.createElement("div")
     subtitle.className = "modal-subtitle"
-    subtitle.textContent = "Enter your master password to access your wallet"
-    subtitle.style.fontSize = "0.95rem"
+    subtitle.textContent = "Enter your master password to unlock your wallet"
+    subtitle.style.fontSize = "0.9rem"
     subtitle.style.color = "rgba(255, 255, 255, 0.7)"
-    subtitle.style.lineHeight = "1.5"
 
     header.appendChild(title)
     header.appendChild(subtitle)
@@ -1581,7 +1755,12 @@ export function createPasswordExistingModal(payload: ModalPayload, onResult: (re
     passwordLabel.htmlFor = "current-password"
     passwordLabel.style.fontSize = "0.9rem"
     passwordLabel.style.color = "rgba(255, 255, 255, 0.8)"
-    passwordLabel.style.fontWeight = "600"
+    passwordLabel.style.fontWeight = "500"
+
+    const passwordInputWrapper = document.createElement("div")
+    passwordInputWrapper.style.position = "relative"
+    passwordInputWrapper.style.display = "flex"
+    passwordInputWrapper.style.alignItems = "center"
 
     const passwordInput = document.createElement("input")
     passwordInput.type = "password"
@@ -1589,28 +1768,62 @@ export function createPasswordExistingModal(payload: ModalPayload, onResult: (re
     passwordInput.id = "current-password"
     passwordInput.autocomplete = "current-password"
     passwordInput.placeholder = "Enter your master password"
-    passwordInput.required = true // Required for password manager detection
-    // Auto-focus handled by focus management system
+    passwordInput.required = true
     passwordInput.style.padding = "12px 16px"
+    passwordInput.style.paddingRight = "40px"
     passwordInput.style.borderRadius = "8px"
     passwordInput.style.border = "1px solid rgba(255, 255, 255, 0.2)"
     passwordInput.style.background = "rgba(255, 255, 255, 0.05)"
     passwordInput.style.color = "#ffffff"
-    passwordInput.style.fontSize = "1rem"
+    passwordInput.style.fontSize = "0.95rem"
     passwordInput.style.outline = "none"
     passwordInput.style.transition = "all 0.2s ease"
+    passwordInput.style.width = "100%"
+
+    // Password visibility toggle
+    const toggleButton = document.createElement("button")
+    toggleButton.type = "button"
+    toggleButton.innerHTML = "👁️"
+    toggleButton.style.position = "absolute"
+    toggleButton.style.right = "12px"
+    toggleButton.style.background = "none"
+    toggleButton.style.border = "none"
+    toggleButton.style.cursor = "pointer"
+    toggleButton.style.fontSize = "1.2rem"
+    toggleButton.style.opacity = "0.7"
+    toggleButton.style.transition = "opacity 0.2s ease"
+    toggleButton.style.padding = "4px"
+    toggleButton.style.borderRadius = "6px"
+
+    toggleButton.onmouseover = () => {
+        toggleButton.style.opacity = "1"
+        toggleButton.style.background = "rgba(255, 255, 255, 0.1)"
+    }
+    toggleButton.onmouseleave = () => {
+        toggleButton.style.opacity = "0.7"
+        toggleButton.style.background = "none"
+    }
+
+    let isPasswordVisible = false
+    toggleButton.onclick = () => {
+        isPasswordVisible = !isPasswordVisible
+        passwordInput.type = isPasswordVisible ? "text" : "password"
+        toggleButton.innerHTML = isPasswordVisible ? "🙈" : "👁"
+    }
 
     passwordInput.onfocus = () => {
         passwordInput.style.borderColor = "#6c63ff"
-        passwordInput.style.boxShadow = "0 0 0 2px rgba(108, 99, 255, 0.2)"
+        passwordInput.style.background = "rgba(255, 255, 255, 0.08)"
     }
     passwordInput.onblur = () => {
         passwordInput.style.borderColor = "rgba(255, 255, 255, 0.2)"
-        passwordInput.style.boxShadow = "none"
+        passwordInput.style.background = "rgba(255, 255, 255, 0.05)"
     }
 
+    passwordInputWrapper.appendChild(passwordInput)
+    passwordInputWrapper.appendChild(toggleButton)
     passwordContainer.appendChild(passwordLabel)
-    passwordContainer.appendChild(passwordInput)
+    passwordContainer.appendChild(passwordInputWrapper)
 
     // Error message
     const errorMessage = document.createElement("div")
@@ -1650,30 +1863,25 @@ export function createPasswordExistingModal(payload: ModalPayload, onResult: (re
     actions.style.marginTop = "10px"
 
     const unlockBtn = document.createElement("button")
-    unlockBtn.type = "submit" // Important for password manager detection
+    unlockBtn.type = "submit"
     unlockBtn.className = "modal-btn modal-btn-primary"
     unlockBtn.textContent = "Unlock Wallet"
     unlockBtn.style.width = "100%"
-    unlockBtn.style.padding = "14px 0"
+    unlockBtn.style.padding = "12px 0"
     unlockBtn.style.border = "none"
-    unlockBtn.style.borderRadius = "12px"
+    unlockBtn.style.borderRadius = "8px"
     unlockBtn.style.fontSize = "1rem"
     unlockBtn.style.fontWeight = "600"
     unlockBtn.style.cursor = "pointer"
     unlockBtn.style.transition = "all 0.2s ease"
-    unlockBtn.style.background = "linear-gradient(135deg, #6c63ff 0%, #8b7fff 100%)"
+    unlockBtn.style.background = "#6c63ff"
     unlockBtn.style.color = "#fff"
-    unlockBtn.style.boxShadow = "0 4px 12px rgba(108, 99, 255, 0.4)"
 
     unlockBtn.onmouseover = () => {
-        unlockBtn.style.background = "linear-gradient(135deg, #7f6fff 0%, #9c8fff 100%)"
-        unlockBtn.style.transform = "translateY(-2px)"
-        unlockBtn.style.boxShadow = "0 6px 20px rgba(108, 99, 255, 0.5)"
+        unlockBtn.style.background = "#7f6fff"
     }
     unlockBtn.onmouseleave = () => {
-        unlockBtn.style.background = "linear-gradient(135deg, #6c63ff 0%, #8b7fff 100%)"
-        unlockBtn.style.transform = "translateY(0)"
-        unlockBtn.style.boxShadow = "0 4px 12px rgba(108, 99, 255, 0.4)"
+        unlockBtn.style.background = "#6c63ff"
     }
 
     actions.appendChild(unlockBtn)

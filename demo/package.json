@@ -15,11 +15,13 @@
     "@arweave-wallet-kit/wander-strategy": "^0.1.2",
     "@dha-team/arbundles": "^1.0.3",
     "@permaweb/aoconnect": "^0.0.85",
-    "@wauth/strategy": "../strategy",
     "arweave": "2.0.0-ec.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "vite-plugin-node-polyfills": "^0.24.0"
+    "vite-plugin-node-polyfills": "^0.24.0",
+    "axios": "^1.10.0",
+    "pocketbase": "^0.26.1",
+    "arconnect": "^1.0.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.29.0",

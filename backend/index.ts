@@ -284,6 +284,25 @@ app.get('/jwk', async (c) => {
     }
 })
 
+// New endpoint for creating wallets without password encryption
+app.get('/jwk-skip-password', async (c) => {
+    try {
+        // Generate new JWK
+        const jwk = await ar.wallets.generate()
+        const publicKey = jwk.n
+        const address = await ar.wallets.jwkToAddress(jwk)
+
+        return c.json({
+            regular_jwk: jwk,
+            address,
+            publicKey
+        })
+    } catch (error: any) {
+        console.error("JWK generation error (skip password):", error)
+        return c.json({ error: error.message || "Failed to generate wallet" }, 400)
+    }
+})
+
 // Endpoint to verify if a password can decrypt user's JWK
 app.post('/verify-password', async (c) => {
     const encryptedPassword = c.req.header("encrypted-password");
@@ -479,13 +498,13 @@ app.post('/wallet-action', async (c) => {
         return c.json({ error: "No bearer token" }, 400)
     }
 
-    if (!encryptedPassword) {
-        return c.json({ error: "Missing encrypted password" }, 400)
-    }
-
     try {
-        // Decrypt the password
-        const { password } = await decryptPassword(encryptedPassword)
+        // Decrypt the password if provided
+        let password = null
+        if (encryptedPassword) {
+            const decrypted = await decryptPassword(encryptedPassword)
+            password = decrypted.password
+        }
 
         // validate the token and find out which user it belongs to
         const userClient = new Pocketbase(pbUrl)
@@ -504,15 +523,24 @@ app.post('/wallet-action', async (c) => {
 
         const walletRow = walletResult.items[0];
         const encryptedJWK = walletRow.encrypted_jwk
+        const regularJWK = walletRow.regular_jwk
         const salt = walletRow.salt
         const publicKey = walletRow.public_key
+        const isEncrypted = walletRow.encrypted
 
-        if (!encryptedJWK || !salt || !publicKey) {
+        let jwk
+        if (!isEncrypted && regularJWK) {
+            // Use regular JWK (no password required)
+            jwk = regularJWK
+        } else if (isEncrypted && encryptedJWK && salt && publicKey) {
+            // Decrypt the JWK using the password
+            if (!password) {
+                return c.json({ error: "Password required for encrypted wallet" }, 400)
+            }
+            jwk = await decryptJWK(encryptedJWK, salt, password, publicKey)
+        } else {
             return c.json({ error: "Invalid wallet data" }, 400)
         }
-
-        // Decrypt the JWK using the password
-        const jwk = await decryptJWK(encryptedJWK, salt, password, publicKey)
         const signer = new ArweaveSigner(jwk)
 
         switch (action) {

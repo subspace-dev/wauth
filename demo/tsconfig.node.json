@@ -18,7 +18,14 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": false,
-    "noUncheckedSideEffectImports": false
+    "noUncheckedSideEffectImports": false,
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@wauth/strategy": ["../strategy/src/index.ts"],
+      "@wauth/sdk": ["../sdk/src/index.ts"],
+    }
   },
-  "include": ["vite.config.ts"]
+  "include": ["vite.config.ts", "../strategy/src", "../sdk/src"]
 }

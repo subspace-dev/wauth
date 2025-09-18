@@ -23,10 +23,12 @@ onRecordCreateRequest((e) => {
     // Get encrypted passwords from request headers
     let encryptedPassword = null
     let encryptedConfirmPassword = null
+    let skipPassword = null
 
     if (e.requestEvent && e.requestEvent.request && e.requestEvent.request.header) {
         encryptedPassword = e.requestEvent.request.header.get("encrypted-password")
         encryptedConfirmPassword = e.requestEvent.request.header.get("encrypted-confirm-password")
+        skipPassword = e.requestEvent.request.header.get("skip-password")
     }
 
     e.record.set("user", authId)
@@ -34,18 +36,30 @@ onRecordCreateRequest((e) => {
     // if user already has a wallet, skip
     // else get new jwk and address and set in record
     if (!encryptedPassword || !encryptedConfirmPassword) {
-        throw new Error("Missing encrypted password headers")
+        if (!skipPassword) {
+            throw new Error("Missing encrypted password headers or skip-password flag")
+        }
     }
 
     try {
-        const res = $http.send({
-            url: "http://localhost:8091/jwk",
-            method: "GET",
-            headers: {
-                "encrypted-password": encryptedPassword,
-                "encrypted-confirm-password": encryptedConfirmPassword
-            }
-        })
+        let res
+        if (skipPassword === "true") {
+            // Use skip password endpoint
+            res = $http.send({
+                url: "http://localhost:8091/jwk-skip-password",
+                method: "GET"
+            })
+        } else {
+            // Use regular password endpoint
+            res = $http.send({
+                url: "http://localhost:8091/jwk",
+                method: "GET",
+                headers: {
+                    "encrypted-password": encryptedPassword,
+                    "encrypted-confirm-password": encryptedConfirmPassword
+                }
+            })
+        }
 
         if (res.statusCode !== 200) {
             throw new Error(`Backend returned status ${res.statusCode}: ${res.body}`)
@@ -54,11 +68,20 @@ onRecordCreateRequest((e) => {
         const body = res.body
         const bodyJson = utils.bodyToJson(body)
 
-        // Store the encrypted JWK and related data
-        e.record.set("encrypted_jwk", bodyJson.encryptedJWK)
-        e.record.set("salt", bodyJson.salt)
-        e.record.set("public_key", bodyJson.publicKey)
-        e.record.set("address", bodyJson.address)
+        if (skipPassword === "true") {
+            // Store the regular JWK and related data (no encryption)
+            e.record.set("regular_jwk", bodyJson.regular_jwk)
+            e.record.set("public_key", bodyJson.publicKey)
+            e.record.set("address", bodyJson.address)
+            e.record.set("encrypted", false) // Mark as unencrypted
+        } else {
+            // Store the encrypted JWK and related data
+            e.record.set("encrypted_jwk", bodyJson.encryptedJWK)
+            e.record.set("salt", bodyJson.salt)
+            e.record.set("public_key", bodyJson.publicKey)
+            e.record.set("address", bodyJson.address)
+            e.record.set("encrypted", true) // Mark as encrypted
+        }
     } catch (error) {
         console.error("Error creating wallet:", error)
         throw error
