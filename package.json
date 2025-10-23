@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "install-all": "bash ./scripts/install.sh",
     "backend": "cd backend && bun run start",
     "start": "cd backend && bun run start",
     "demo": "cd demo && bun run dev",
