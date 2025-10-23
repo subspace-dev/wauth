@@ -1,6 +1,6 @@
 {
   "name": "@wauth/sdk",
-  "version": "0.0.18",
+  "version": "0.0.19",
   "description": "Web2 auth sdk for Arweave",
   "repository": {
     "type": "git",
