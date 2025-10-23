@@ -1,6 +1,6 @@
 {
   "name": "@wauth/strategy",
-  "version": "0.0.19",
+  "version": "0.0.19-1",
   "description": "WAuth strategy for Arweave Wallet Kit",
   "repository": {
     "type": "git",
