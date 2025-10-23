@@ -480,6 +480,77 @@ app.get("/check-bot/:guildId", async (c) => {
     return c.json({ exists: res.status === 200 }, 200)
 })
 
+// Endpoint to encrypt an existing unencrypted wallet
+app.post('/encrypt-wallet', async (c) => {
+    const encryptedPassword = c.req.header("encrypted-password")
+    const encryptedConfirmPassword = c.req.header("encrypted-confirm-password")
+    const token = c.req.header("Authorization")
+    const bearerToken = (token?.split(" ")[1])?.trim()
+
+    if (!bearerToken) {
+        return c.json({ error: "No bearer token" }, 400)
+    }
+
+    if (!encryptedPassword || !encryptedConfirmPassword) {
+        return c.json({ error: "Missing required fields: encrypted-password, encrypted-confirm-password" }, 400)
+    }
+
+    try {
+        // Decrypt both passwords
+        const { password } = await decryptPassword(encryptedPassword)
+        const { password: confirmPassword } = await decryptPassword(encryptedConfirmPassword)
+
+        // Verify passwords match
+        if (password !== confirmPassword) {
+            return c.json({ error: "Passwords do not match" }, 400)
+        }
+
+        // Validate the token and find out which user it belongs to
+        const userClient = new Pocketbase(pbUrl)
+        userClient.authStore.save(bearerToken!, null)
+        const user = await userClient.collection("users").authRefresh()
+        const userId = user.record.id
+
+        // Get the user's wallet from the database
+        const walletResult = await pb.collection("wallets").getList(1, 1, {
+            filter: `user = "${userId}"`
+        })
+
+        if (walletResult.totalItems === 0) {
+            return c.json({ error: "No wallet found" }, 400)
+        }
+
+        const walletRow = walletResult.items[0]
+
+        // Check if wallet is already encrypted
+        if (walletRow.encrypted) {
+            return c.json({ error: "Wallet is already encrypted" }, 400)
+        }
+
+        // Get the regular JWK from the wallet
+        const regularJWK = walletRow.regular_jwk
+        if (!regularJWK) {
+            return c.json({ error: "No regular JWK found in wallet" }, 400)
+        }
+
+        // Encrypt the JWK with the password
+        const { encryptedJWK, salt } = await encryptJWK(regularJWK, password)
+
+        // Update the wallet record to be encrypted
+        await pb.collection("wallets").update(walletRow.id, {
+            encrypted_jwk: encryptedJWK,
+            salt: salt,
+            encrypted: true,
+            regular_jwk: null // Remove the unencrypted JWK
+        })
+
+        return c.json({ success: true }, 200)
+    } catch (error: any) {
+        console.error("Wallet encryption error:", error)
+        return c.json({ error: error.message || "Failed to encrypt wallet" }, 400)
+    }
+})
+
 export enum WalletActions {
     SIGN = "sign",
     ENCRYPT = "encrypt",

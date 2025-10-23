@@ -748,9 +748,9 @@ export class WAuth {
                     this.wallet = await this.getWallet();
                 }
             } else {
-                // New user - getWallet will handle wallet creation with appropriate modal
-                wauthLogger.simple('info', 'New user detected, will create wallet when needed');
-                this.wallet = await this.getWallet();
+                // New user - create unencrypted wallet by default
+                wauthLogger.simple('info', 'New user detected, creating unencrypted wallet by default');
+                this.wallet = await this.createWalletWithoutPassword();
             }
 
             if (!this.wallet) {
@@ -1031,57 +1031,9 @@ export class WAuth {
                 return this.wallet;
             }
 
-            // For new wallet creation, show the password creation modal
-            if (showPasswordModal) {
-                wauthLogger.simple('info', 'No wallet exists, requesting password for new wallet creation');
-                const result = await new Promise<ModalResult>((resolve) => {
-                    this.createModal("password-new", {}, resolve);
-                });
-
-                if (!result.proceed) {
-                    wauthLogger.passwordOperation('new password creation cancelled', false);
-                    throw new Error("[wauth] Password required to create wallet");
-                }
-
-                if (result.skipPassword) {
-                    wauthLogger.simple('info', 'User chose to skip password - creating unencrypted wallet');
-                    // Create wallet without password
-                    this.wallet = await this.createWalletWithoutPassword();
-                    return this.wallet;
-                } else if (result.password) {
-                    wauthLogger.sessionUpdate('Storing new password for wallet creation');
-                    this.sessionPassword = result.password;
-                    await this.storePasswordInSession(result.password);
-                } else {
-                    wauthLogger.passwordOperation('new password creation cancelled', false);
-                    throw new Error("[wauth] Password required to create wallet");
-                }
-            } else {
-                throw new Error("[wauth] Password required to create wallet");
-            }
-
-            const encryptedPassword = await PasswordEncryption.encryptPassword(this.sessionPassword, this.backendUrl);
-            const encryptedConfirmPassword = await PasswordEncryption.encryptPassword(this.sessionPassword, this.backendUrl);
-
-            wauthLogger.backendRequest('POST', '/wallets');
-            await this.pb.collection("wallets").create({}, {
-                headers: {
-                    "encrypted-password": encryptedPassword,
-                    "encrypted-confirm-password": encryptedConfirmPassword
-                }
-            });
-
-            // Use getList instead of getFirstListItem to avoid 404 if creation failed
-            const createdResult = await this.pb.collection("wallets").getList(1, 1, {
-                filter: `user.id = "${userId}"`
-            });
-
-            if (createdResult.totalItems === 0) {
-                throw new Error("[wauth] Failed to create wallet - no record found after creation");
-            }
-
-            wauthLogger.walletOperation('Successfully created wallet', { walletId: createdResult.items[0].id });
-            this.wallet = createdResult.items[0];
+            // Create unencrypted wallet by default
+            wauthLogger.simple('info', 'Creating unencrypted wallet by default');
+            this.wallet = await this.createWalletWithoutPassword();
             return this.wallet;
         }
 
@@ -1248,6 +1200,73 @@ export class WAuth {
 
     public logout() {
         this.clearAllAuthData();
+    }
+
+    /**
+     * Encrypt an existing unencrypted wallet with a password
+     * This allows users to opt-in to encryption after wallet creation
+     */
+    public async encryptWallet(password: string): Promise<boolean> {
+        if (!this.isLoggedIn()) {
+            throw new Error("[wauth] Not logged in");
+        }
+
+        if (!this.wallet) {
+            this.wallet = await this.getWallet();
+        }
+
+        if (!this.wallet) {
+            throw new Error("[wauth] No wallet found");
+        }
+
+        // Check if wallet is already encrypted
+        if (this.wallet.encrypted) {
+            throw new Error("[wauth] Wallet is already encrypted");
+        }
+
+        try {
+            wauthLogger.simple('info', 'Encrypting existing unencrypted wallet');
+
+            // Encrypt the password for backend
+            const encryptedPassword = await PasswordEncryption.encryptPassword(password, this.backendUrl);
+            const encryptedConfirmPassword = await PasswordEncryption.encryptPassword(password, this.backendUrl);
+
+            // Call backend to encrypt the wallet
+            const response = await fetch(`${this.backendUrl}/encrypt-wallet`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.getAuthToken()}`,
+                    'encrypted-password': encryptedPassword,
+                    'encrypted-confirm-password': encryptedConfirmPassword
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to encrypt wallet');
+            }
+
+            // Store password in session
+            this.sessionPassword = password;
+            await this.storePasswordInSession(password);
+
+            // Refresh wallet data
+            this.wallet = await this.getWallet();
+
+            wauthLogger.simple('info', 'Wallet successfully encrypted');
+            return true;
+        } catch (error) {
+            wauthLogger.simple('error', 'Failed to encrypt wallet', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Check if the current wallet is encrypted
+     */
+    public isWalletEncrypted(): boolean {
+        return this.wallet?.encrypted === true;
     }
 }
 

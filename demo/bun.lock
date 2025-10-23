@@ -4,13 +4,13 @@
     "": {
       "name": "demo",
       "dependencies": {
+        "@wauth/strategy": "../strategy",
         "@arweave-wallet-kit/core": "^0.1.1",
         "@arweave-wallet-kit/react": "^0.3.2",
         "@arweave-wallet-kit/wander-strategy": "^0.1.2",
         "@dha-team/arbundles": "^1.0.3",
         "@permaweb/aoconnect": "^0.0.85",
         "@wauth/sdk": "file:../sdk",
-        "@wauth/strategy": "file:../strategy",
         "arconnect": "^1.0.4",
         "arweave": "2.0.0-ec.1",
         "axios": "^1.10.0",

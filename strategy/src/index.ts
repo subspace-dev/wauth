@@ -68,7 +68,7 @@ export default class WAuthStrategy implements Strategy {
         console.log("provider", provider)
         this.id = this.id + "-" + this.provider
         this.name = `${this.provider.charAt(0).toUpperCase() + this.provider.slice(1).toLowerCase()}`
-        this.walletRef = new WAuth({ dev: false }) // auto reconnects based on localStorage
+        this.walletRef = new WAuth({ dev: true }) // auto reconnects based on localStorage
         this.authData = this.walletRef.getAuthData();
         this.logo = this.logos[provider]
         this.windowArweaveWalletBackup = null;
@@ -229,6 +229,20 @@ export default class WAuthStrategy implements Strategy {
 
     public getUsername(): string | null {
         return this.walletRef.getUsername()
+    }
+
+    /**
+     * Encrypt the current unencrypted wallet with a password
+     */
+    public async encryptWallet(password: string): Promise<boolean> {
+        return await this.walletRef.encryptWallet(password)
+    }
+
+    /**
+     * Check if the current wallet is encrypted
+     */
+    public isWalletEncrypted(): boolean {
+        return this.walletRef.isWalletEncrypted()
     }
 }
 

@@ -56,14 +56,14 @@ button {
 .title {
     font-size: 2.5rem;
     font-weight: 700;
-    color: #ffffff;
+    color: #ffffff !important;
     margin-bottom: 8px;
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .subtitle {
     font-size: 1.1rem;
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(255, 255, 255, 0.9) !important;
     font-weight: 400;
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
@@ -111,7 +111,7 @@ button {
 .card-title {
     font-size: 1.2rem;
     font-weight: 600;
-    color: #ffffff;
+    color: #ffffff !important;
     margin-bottom: 16px;
     display: flex;
     align-items: center;
@@ -133,7 +133,7 @@ button {
 
 .label {
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(255, 255, 255, 0.9) !important;
     font-size: 0.9rem;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
@@ -144,7 +144,7 @@ button {
     padding: 6px 10px;
     border-radius: 6px;
     font-size: 0.85rem;
-    color: #ffffff;
+    color: #ffffff !important;
     max-width: 200px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -156,7 +156,7 @@ button {
 
 .token {
     background: rgba(139, 69, 19, 0.6);
-    color: #ffffff;
+    color: #ffffff !important;
     border: 1px solid rgba(255, 193, 7, 0.3);
 }
 
@@ -561,6 +561,33 @@ button {
     transform: translateY(0);
 }
 
+.settings-btn {
+    background: transparent;
+    color: #ffffff;
+    width: 36px;
+    height: 36px;
+    border: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    align-self: center;
+    flex-shrink: 0;
+}
+
+.settings-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.settings-btn:active {
+    transform: translateY(0);
+}
+
 .refresh-btn {
     background: rgba(59, 130, 246, 0.6);
     color: #ffffff;
@@ -664,4 +691,619 @@ button {
     background: rgba(245, 158, 11, 0.2);
     color: #f59e0b;
     border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+/* === ENCRYPT PAGE ENHANCED STYLES === */
+
+/* Status Banner */
+.status-banner {
+    margin-bottom: 24px;
+}
+
+.status-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    border-radius: 16px;
+    backdrop-filter: blur(15px);
+    border: 2px solid;
+    transition: all 0.3s ease;
+}
+
+.status-card.secure {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.4);
+}
+
+.status-card.warning {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.4);
+}
+
+.status-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.status-content h3 {
+    color: #ffffff;
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.status-content p {
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.5;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Primary Card Styling */
+.primary-card {
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid rgba(255, 255, 255, 0.25);
+}
+
+/* Status Badge */
+.status-badge {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    border: 1px solid;
+}
+
+.status-badge.secure {
+    background: rgba(16, 185, 129, 0.6);
+    color: #ffffff;
+    border-color: rgba(16, 185, 129, 0.8);
+}
+
+.status-badge.unsecure {
+    background: rgba(239, 68, 68, 0.6);
+    color: #ffffff;
+    border-color: rgba(239, 68, 68, 0.8);
+}
+
+/* Friendly Info Box */
+.friendly-info {
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+.friendly-info p {
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* Success Box */
+.success-box {
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.success-box h4 {
+    color: #10b981;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.success-box p {
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.5;
+}
+
+/* Encryption Form */
+.encryption-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.input-label {
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.95rem;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.input-hint {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.8rem;
+    font-style: italic;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: 1px solid rgba(16, 185, 129, 0.8);
+    font-weight: 600;
+    padding: 12px 24px;
+    transition: all 0.2s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Simple Comparison */
+.simple-comparison {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.comparison-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.comparison-item.secure {
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.comparison-item.warning {
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.comparison-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    margin-top: 4px;
+}
+
+.comparison-content h4 {
+    color: #ffffff;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.comparison-content ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.comparison-content li {
+    padding: 6px 0;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Tips Grid */
+.tips-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.tip-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+}
+
+.tip-item:hover {
+    background: rgba(0, 0, 0, 0.4);
+    transform: translateY(-1px);
+}
+
+.tip-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.tip-text {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+/* Responsive Design for New Components */
+@media (max-width: 768px) {
+    .status-card {
+        flex-direction: column;
+        text-align: center;
+        gap: 12px;
+    }
+
+    .status-icon {
+        font-size: 1.5rem;
+    }
+
+    .status-content h3 {
+        font-size: 1.1rem;
+    }
+
+    .comparison-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 12px;
+    }
+
+    .comparison-icon {
+        font-size: 1.3rem;
+    }
+
+    .tip-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
+    }
+
+    .tip-icon {
+        font-size: 1.1rem;
+    }
+}
+
+/* Encrypt Button in Wallet Connection */
+.encrypt-btn {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: 1px solid rgba(16, 185, 129, 0.8);
+    color: #ffffff;
+    font-weight: 600;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-top: 12px;
+}
+
+.encrypt-btn:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+/* Wallet Information Layout */
+.wallet-info-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.wallet-address-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+}
+
+.wallet-address-full {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(5px);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    word-break: break-all;
+    line-height: 1.3;
+}
+
+.wallet-info-container .status {
+    margin-top: 20px;
+    flex-shrink: 0;
+}
+
+/* Responsive design for wallet info */
+@media (max-width: 768px) {
+    .wallet-info-container {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .wallet-info-container .status {
+        margin-top: 0;
+        align-self: flex-start;
+    }
+
+    .wallet-address-section {
+        width: 100%;
+    }
+
+    .wallet-address-full {
+        font-size: 0.8rem;
+    }
+}
+
+/* Progress Indicator Styles */
+.progress-indicator {
+    margin-bottom: 24px;
+}
+
+.progress-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    position: relative;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+}
+
+.step-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.3s ease;
+}
+
+.step.active .step-circle {
+    background: #10b981;
+    border-color: #10b981;
+    color: #ffffff;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+}
+
+.step.completed .step-circle {
+    background: #10b981;
+    border-color: #10b981;
+    color: #ffffff;
+}
+
+.step-label {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.step.active .step-label {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 600;
+}
+
+.step.completed .step-label {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.progress-line {
+    height: 2px;
+    width: 50px;
+    background: rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+    position: relative;
+    top: -10px;
+}
+
+.progress-line.completed {
+    background: #10b981;
+}
+
+/* Password Flow Styles */
+.password-requirements {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.password-requirements h4 {
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.password-requirements ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.password-requirements li {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+    padding: 4px 0;
+    line-height: 1.4;
+    transition: color 0.3s ease;
+}
+
+.requirement-neutral {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.requirement-met {
+    color: #10b981 !important;
+}
+
+.requirement-not-met {
+    color: #ef4444 !important;
+}
+
+/* Password Match Status */
+.password-match-status {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.match-neutral {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.match-success {
+    color: #10b981;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.match-error {
+    color: #ef4444;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.error-messages {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+}
+
+.error-message {
+    color: #ef4444;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    margin-bottom: 4px;
+}
+
+.error-message:last-child {
+    margin-bottom: 0;
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.btn-secondary {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 400;
+    padding: 12px 24px;
+    transition: all 0.2s ease;
+    opacity: 0.8;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.4);
+    color: rgba(255, 255, 255, 0.7);
+    transform: none;
+    opacity: 0.9;
+}
+
+.btn-secondary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Start Over Link */
+.start-over-link {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+    font-weight: 400;
+    padding: 8px 0;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    text-decoration: none;
+    align-self: center;
+    text-align: center;
+    width: 100%;
+}
+
+.start-over-link:hover:not(:disabled) {
+    color: rgba(255, 255, 255, 0.7);
+    background: none;
+    transform: none;
+}
+
+.start-over-link:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* Responsive design for password flow */
+@media (max-width: 768px) {
+    .progress-steps {
+        gap: 4px;
+    }
+
+    .step-circle {
+        width: 28px;
+        height: 28px;
+        font-size: 0.8rem;
+    }
+
+    .step-label {
+        font-size: 0.7rem;
+    }
+
+    .progress-line {
+        width: 20px;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .btn-secondary,
+    .btn-primary {
+        width: 100%;
+    }
 }
